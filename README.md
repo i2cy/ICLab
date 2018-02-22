@@ -1,6 +1,6 @@
 # ICLab Command Shell Working Table #
-  It is kind of like a cmd shell of *system shell* + *custom shell* + *custom module(which is ***VERY SCALABLE****)*
-  and its custom stuff will be encrypted with your own password so that your data will be very safe
+  It is kind of like a cmd shell of *system shell* + *custom shell* + *custom module(which is ****VERY SCALABLE****)*,   
+  and its custom stuff(such as modules, userdata) will be encrypted with your own password so that your data will be very safe(I do believe my encryption algorithm is awesome)
 
 ## Instructions ##
 - to run on **Windows**, you can just run **Table.cmd** or use command to execute
