@@ -22,7 +22,7 @@
   ***INFO*** is a dict-type tag with a formant of *{<command_name>:(<function_name>,<short_description>)}*    
   which is used to register the command in module
 - to install a module, please load a **block file** first and use the command of **"edmods"**
-- example(***example_mod.py*** in ***mods/***):   
+- example(***example_mod.py*** in ***mods***):   
 ~~~
 INFO = {"example":("test","This is an example mod")}
 
