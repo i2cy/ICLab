@@ -10,7 +10,7 @@
 
 # global tags:
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 
 
@@ -171,9 +171,15 @@ def end(): # close ICLab
 
 
 
-def scan_path(pathx, mode): # list file(s) & folder(s)
+def scan_path(patho, mode): # list file(s) & folder(s)
 	paths = []
 	files = []
+	pathx = ""
+	for i in patho:
+		if i in ("\\","/"):
+			pathx += os.sep
+		else:
+			pathx += i
 	if os.sep != pathx[-1:]:
 		target_path = pathx + os.sep
 	else:
@@ -830,7 +836,7 @@ Usage: chpwd
  -h --help                      - display this page
 
 Examples:
- >chpwd
+ > chpwd
 """)
 		else:
 			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
@@ -954,8 +960,8 @@ Usage: edconf <-e,-d> <key_name> [-l,-v]
  -h --help                      - display this page
 
 Examples:
- >edconf -e iccode_key -d window_color
- >edconf -l
+ > edconf -e iccode_key -d window_color
+ > edconf -l
 """)
 		elif i in ("-e","--edit"):
 			edit_key = opts[i]
