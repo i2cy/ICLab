@@ -10,7 +10,7 @@
 
 # global tags:
 
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 
 
 
@@ -153,19 +153,38 @@ class iccode: # Simple Data encoder/decoder
 
 
 
-def echo(msg): # console message printer ( can be redefine by package )
-	if ECHO:
-		print("<"+ HEAD + "> " + msg)
+def echo(mode,msg): # console message printer ( can be redefine by package )
+	global ECHO
+	if mode == 1:
+		msg = "<"+ HEAD + "> " + msg
+	elif mode == 0:
+		pass
+	if ECHO == True:
+		print(msg)
+	elif ECHO == False:
+		pass
+	else:
+		try:
+			msg = msg.encode()
+			if os.path.exists(ECHO):
+				f = open(ECHO,"ab")
+				f.write(msg+(os.linesep).encode())
+				f.close()
+			else:
+				f = open(ECHO,"wb")
+				f.write(msg+(os.linesep).encode())
+				f.close()
+		except Exception as err:
+			f = ECHO
+			msg = msg.decode()
+			ECHO = True
+			echo(1,"[ERROR] Failed to write console message to file \"" + f + "\",result: " + str(err))
+			print(msg)
 
 
 
 
 def end(): # close ICLab
-	try:
-		os.removedirs("temp")
-		os.mkdir("temp")
-	except Exception:
-		pass
 	sys.exit(0)
 
 
@@ -267,15 +286,38 @@ def cmd_loop(): # command shell loop
 				temp = input(HEAD + ":" + PATH + ">")
 				cmd = ""
 				args = ""
+				temp_2 = ""
 				tag = True
+				to = False
 				for i in temp:
-					if tag and i != " ":
-						cmd += i
+					if tag:
+						if not i in (" ",">"):
+							cmd += i
+							continue
+						if i == " ":
+							tag = False
+							continue
+						elif i == ">":
+							tag = False
+							temp_2 += i
+					else:
+						temp_2 += i
 						continue
-					if tag and i == " ":
-						tag = False
+			except KeyboardInterrupt:
+				echo(0,"\nKeyboardInterrupt")
+				continue
+			if cmd in CMDS:
+				write_to = ""
+				for i in temp_2:
+					if i == ">":
+						write_to = ""
+						to = True
 						continue
-					if not tag:
+					if to:
+						write_to += i
+				if write_to != "":
+					temp = temp_2[:-(len(write_to)+1)]
+					for i in temp:
 						if i == "\"":
 							a = "\\" + i
 						elif i == "\\":
@@ -283,28 +325,36 @@ def cmd_loop(): # command shell loop
 						else:
 							a = i
 						args += a
-						continue
-			except KeyboardInterrupt:
-				print("\nKeyboardInterrupt")
-				continue
-			if cmd in CMDS:
+					echo(1,"[INFO] console message is now redirected to \"" + write_to + "\"")
+					ECHO = write_to
+				else:
+					for i in temp_2:
+						if i == "\"":
+							a = "\\" + i
+						elif i == "\\":
+							a = "\\" + i
+						else:
+							a = i
+						args += a
 				try:
 					try:
 						exec((CMDS[cmd])[0]+ "(\"" + args + "\")")
+						if ECHO == write_to:
+							ECHO = True
 					except KeyboardInterrupt:
 						ECHO = True
-						echo("keyboard interrupt detected, exitting")
+						echo(1,"keyboard interrupt detected, exitting")
 						continue
 				except Exception as err:
 					ECHO = True
-					echo("[ERROR] Error while executing \"" + cmd + "\", result: " + str(err))
+					echo(1,"[ERROR] Error while executing \"" + cmd + "\", result: " + str(err))
 			else:
 				try:
 					os.system(temp)
 				except KeyboardInterrupt:
 					pass
 	except KeyboardInterrupt:
-		echo("keyboard interrupt detected, exitting")
+		echo(1,"keyboard interrupt detected, exitting")
 		return
 
 
@@ -414,47 +464,47 @@ def init(): # initializer
 	"edmods":("edit_module","Block module manager"),
 	"edconf":("edit_userconf","Block user config editor"),
 	"chpwd":("ch_pwd","Block password change guide")}
-	echo("Initilizing...")
+	echo(1,"Initilizing...")
 	import sys, os, time, zipfile, json, shutil
 	# python version check
 	if float(sys.version[:3]) < 3.4:
-		echo("ICLab only support Python3.4+ environment, please go visit https://www.python.org/downloads download a Python3.4+ if you haven't installed yet")
+		echo(1,"ICLab only support Python3.4+ environment, please go visit https://www.python.org/downloads download a Python3.4+ if you haven't installed yet")
 		sys.exit(1)
 	else:
-		echo("python version check: PASS")
+		echo(1,"python version check: PASS")
 	# os check
 	if os.name == "nt":
 		OS = "win"
 		TITLE = "ICLab (v" + VERSION + ")"
 	else:
 		OS = "linux"
-	echo("os name checked: " + OS)
+	echo(1,"os name checked: " + OS)
 	# set title if windows
 	if OS == "win":
 		os.system("title " + TITLE)
-		echo("title setting status: PASS")
+		echo(1,"title setting status: PASS")
 	else:
 		pass
 	# work path check
 	if os.getcwd() != sys.path[0] and sys.path[0] != "":
-		echo("moving work path to \"" + sys.path[0] + "\"")
+		echo(1,"moving work path to \"" + sys.path[0] + "\"")
 		os.chdir(sys.path[0])
 	else:
-		echo("work path check: PASS")
+		echo(1,"work path check: PASS")
 	PATH = os.getcwd()
 	# path check & make
 	temp = ("temp"+os.sep,"."+os.sep)
 	for i in temp:
 		path_fixer(i)
-	echo("folder check: PASS")
+	echo(1,"folder check: PASS")
 	OCMDS = {}
 	for i in CMDS:
 		OCMDS.update({i:CMDS[i]})
 	OG = {}
 	for i in globals():
 		OG.update({i:globals()[i]})
-	echo("backup globals: PASS")
-	echo("Initialization compeleted")
+	echo(1,"backup globals: PASS")
+	echo(1,"Initialization compeleted")
 
 
 
@@ -471,15 +521,15 @@ def main(): # main scripts
 		else:
 			pass
 	if len(blocks) == 1:
-		echo("block package found: " + blocks[0])
+		echo(1,"block package found: " + blocks[0])
 		BLOCK = blocks[0]
 	elif len(blocks) == 0:
-		echo("can't find a ICLab block file, use \"createblock\" to create a block file")
+		echo(1,"can't find a ICLab block file, use \"createblock\" to create a block file")
 	else:
-		echo("more than 1 block file found, please choose one to load(input the number before the one you want to choose)")
+		echo(1,"more than 1 block file found, please choose one to load(input the number before the one you want to choose)")
 		n = 1
 		for i in blocks:
-			print(" " + str(n) + ". " + i[2:])
+			echo(0," " + str(n) + ". " + i[2:])
 			n += 1
 		wait = True
 		try:
@@ -489,10 +539,10 @@ def main(): # main scripts
 					BLOCK = blocks[int(temp)-1]
 					wait = False
 				except Exception:
-					print("Please input correct number, example \"1\"")
+					echo(0,"Please input correct number, example \"1\"")
 		except KeyboardInterrupt:
-			print("")
-			echo("keyboard interrupt detected, skipping block loading")
+			echo(0,"")
+			echo(1,"keyboard interrupt detected, skipping block loading")
 	if len(BLOCK) > 0 and type("") == type(BLOCK):
 		wait = True
 		try:
@@ -504,11 +554,11 @@ def main(): # main scripts
 					if type("") == type(BLOCK):
 						wait = True
 				except Exception as err:
-					echo("[ERROR] Failed to load block, result: " + str(err))
+					echo(1,"[ERROR] Failed to load block, result: " + str(err))
 					wait = True
 		except KeyboardInterrupt:
-			print("")
-			echo("keyboard interrupt detected, skipping block loading")
+			echo(0,"")
+			echo(1,"keyboard interrupt detected, skipping block loading")
 	cmd_loop()
 	end()
 
@@ -521,7 +571,7 @@ def main(): # main scripts
 
 
 def iclab_help(cmd): # iclab help
-	echo("ICLab help ( ICLab Version: " + VERSION + """ )
+	echo(1,"ICLab help ( ICLab Version: " + VERSION + """ )
 
 ( for details please try "<command> -h" or "<command> --help" )
 """)
@@ -531,15 +581,15 @@ def iclab_help(cmd): # iclab help
 	cmds.sort()
 	for i in cmds:
 		temp = "  " + i
-		print(temp + (5-int(len(temp)/8))*"\t" + "- " + (CMDS[i])[1])
-	print("")
+		echo(0,temp + (5-int(len(temp)/8))*"\t" + "- " + (CMDS[i])[1])
+	echo(0,"")
 	return
 
 
 
 
 def exit_iclab(cmd): # exit iclab
-	echo("cleanning up caches")
+	echo(1,"cleanning up caches")
 	shutil.rmtree(sys.path[0] + os.sep + "temp")
 	end()
 
@@ -554,11 +604,11 @@ def edit_module(cmd): # module adder
 	opts = get_args(cmd)
 	target = ""
 	if opts == {}:
-		echo("[ERROR] syntax error, try \"-h\" tag for help")
+		echo(1,"[ERROR] syntax error, try \"-h\" tag for help")
 		return
 	for i in opts:
 		if i in ("-h","--help"):
-			echo("""ICLab Block Module Add/Remover
+			echo(1,"""ICLab Block Module Add/Remover
 
 Usage: edmods <-a,-d> <module_name> [-l]
 
@@ -579,10 +629,10 @@ Examples:
 		elif i in ("-l","--list"):
 			lists = True
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if type("") == type(BLOCK):
-		echo("[ERROR] no block loaded, please load a block first")
+		echo(1,"[ERROR] no block loaded, please load a block first")
 		return
 	else:
 		mods = []
@@ -592,72 +642,72 @@ Examples:
 	if len(add) > 0:
 		pathx = sys.path[0] + os.sep + "temp" + os.sep + "extracts" + os.sep
 		if not os.path.exists(add):
-			echo("[ERROR] can't find \"" + add + "\"")
+			echo(1,"[ERROR] can't find \"" + add + "\"")
 			return
 		else:
 			pass
 		temp = read_path(add)[1]
-		echo("add module")
+		echo(1,"add module")
 		if temp in mods:
-			echo("\"" + temp + "\" module already exist, overwrite?(input \"y\" for yes, else for not)")
+			echo(1,"\"" + temp + "\" module already exist, overwrite?(input \"y\" for yes, else for not)")
 			choice = input("")
 			if choice == "y":
-				echo("extracting block")
+				echo(1,"extracting block")
 				try:
 					extract_block()
 				except Exception as err:
-					echo("[ERROR] can't extract block: " + str(err) + ", exiting")
+					echo(1,"[ERROR] can't extract block: " + str(err) + ", exiting")
 					return
-				echo("editing files")
+				echo(1,"editing files")
 				os.remove(pathx + "mods" + os.sep + temp)
-				echo("encrypting")
+				echo(1,"encrypting")
 				iccode_en(PWD,add,pathx + "mods" + os.sep + temp)
-				echo("updating block and deleting caches")
+				echo(1,"updating block and deleting caches")
 				try:
 					update_block()
 				except Exception as err:
-					echo("[ERROR] can't update block: " + str(err) + ", exiting")
+					echo(1,"[ERROR] can't update block: " + str(err) + ", exiting")
 					return
-				echo("\"" + add + "\" module added, please reload block to update")
+				echo(1,"\"" + add + "\" module added, please reload block to update")
 			else:
 				pass
 		else:
-			echo("encrypting")
+			echo(1,"encrypting")
 			iccode_en(PWD,add,sys.path[0] + os.sep + "temp" + os.sep + "module.temp")
-			echo("updating block")
+			echo(1,"updating block")
 			try:
 				BLOCK.write(sys.path[0] + os.sep + "temp" + os.sep + "module.temp","mods" + os.sep + temp)
 			except Exception as err:
-				echo("[ERROR] can't update block: " + str(err) + ", exiting")
+				echo(1,"[ERROR] can't update block: " + str(err) + ", exiting")
 				return
-			echo("deleting caches")
+			echo(1,"deleting caches")
 			os.remove(sys.path[0] + os.sep + "temp" + os.sep + "module.temp")
-			echo("\"" + add + "\" module added, please reload block to update")
+			echo(1,"\"" + add + "\" module added, please reload block to update")
 	if len(dlt) > 0:
 		pathx = sys.path[0] + os.sep + "temp" + os.sep + "extracts" + os.sep
 		if not dlt in mods:
-			echo("[WARNING] no module named \"" + dlt + " in block")
+			echo(1,"[WARNING] no module named \"" + dlt + " in block")
 		else:
-			echo("extracting block")
+			echo(1,"extracting block")
 			try:
 				extract_block()
 			except Exception as err:
-				echo("[ERROR] can't extract block: " + str(err) + ", exiting")
+				echo(1,"[ERROR] can't extract block: " + str(err) + ", exiting")
 				return
-			echo("editing files")
+			echo(1,"editing files")
 			os.remove(pathx + "mods" + os.sep + dlt)
-			echo("updating block and deleting caches")
+			echo(1,"updating block and deleting caches")
 			try:
 				update_block()
 			except Exception as err:
-				echo("[ERROR] can't update block: " + str(err) + ", exiting")
+				echo(1,"[ERROR] can't update block: " + str(err) + ", exiting")
 				return
-			echo("\"" + dlt + "\" module deleted, please reload block to update")
+			echo(1,"\"" + dlt + "\" module deleted, please reload block to update")
 	if lists:
-		echo("modules in block:")
+		echo(1,"modules in block:")
 		for i in mods:
-			print(" - " + i)
-		print("")
+			echo(0," - " + i)
+		echo(0,"")
 
 
 
@@ -668,7 +718,7 @@ def unload_block(cmd): # unload block
 	target = ""
 	for i in opts:
 		if i in ("-h","--help"):
-			echo("""ICLab Block unloader
+			echo(1,"""ICLab Block unloader
 
 Usage: unloadblk
 
@@ -679,14 +729,14 @@ Examples:
 """)
 			return
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if type("") == type(BLOCK):
-		echo("[ERROR] No block loaded, no need to unload")
+		echo(1,"[ERROR] No block loaded, no need to unload")
 		return
 	else:
 		pass
-	echo("deleting loaded globals")
+	echo(1,"deleting loaded globals")
 	gbs_now = {}
 	for i in globals():
 		gbs_now.update({i:globals()[i]})
@@ -694,16 +744,16 @@ Examples:
 		gbs_now.pop(i)
 	for i in gbs_now:
 		globals().pop(i)
-	echo("reseting header")
+	echo(1,"reseting header")
 	HEAD = "ICLab"
-	echo("reseting block tag")
+	echo(1,"reseting block tag")
 	BLOCK.close()
 	BLOCK = BLOCK.filename
 	PWD = ""
 	CMDS = {}
 	for i in OCMDS:
 		CMDS.update({i:OCMDS[i]})
-	echo("block unloaded")
+	echo(1,"block unloaded")
 
 
 
@@ -713,11 +763,11 @@ def load_block(cmd): # load block
 	opts = get_args(cmd)
 	target = ""
 	if opts == {}:
-		echo("[ERROR] syntax error, try \"-h\" tag for help")
+		echo(1,"[ERROR] syntax error, try \"-h\" tag for help")
 		return
 	for i in opts:
 		if i in ("-h","--help"):
-			echo("""ICLab Block Loader
+			echo(1,"""ICLab Block Loader
 
 Usage: loadblk -t <block_name> -p <password>
 
@@ -734,19 +784,19 @@ Examples:
 		elif i in ("-p","--password"):
 			temp = opts[i]
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if type("") != type(BLOCK):
-		echo("[ERROR] a block has already loaded, try \"unloadblk\" to unload first")
+		echo(1,"[ERROR] a block has already loaded, try \"unloadblk\" to unload first")
 		return
 	else:
 		target = os.path.abspath(target)
 	if not os.path.exists(target):
-		echo("[ERROR] \"" + target + "\" not found")
+		echo(1,"[ERROR] \"" + target + "\" not found")
 		return
 	else:
 		pass
-	echo("loading block infos...")
+	echo(1,"loading block infos...")
 	try:
 		blk = load_blockinfo(temp,target)
 		if blk[0]:
@@ -754,9 +804,9 @@ Examples:
 		else:
 			raise Exception()
 	except Exception as err:
-		echo("[ERROR] Can't load \"" + target + "\", wrong password or block file has been broken")
+		echo(1,"[ERROR] Can't load \"" + target + "\", wrong password or block file has been broken")
 		return
-	echo("scanning additional modules...")
+	echo(1,"scanning additional modules...")
 	files = BLOCK.namelist()
 	mods = []
 	for i in files:
@@ -765,7 +815,7 @@ Examples:
 		else:
 			pass
 	if len(mods) > 0:
-		echo(str(len(mods)) + " modules found, loading modules...")
+		echo(1,str(len(mods)) + " modules found, loading modules...")
 		loaded = 0
 		coder = iccode(PWD)
 		for i in mods:
@@ -778,12 +828,12 @@ Examples:
 				loaded += 1
 				del INFO
 			except Exception as err:
-				echo("[WARNING] failed to load \"" + i + "\", result: " + str(err))
+				echo(1,"[WARNING] failed to load \"" + i + "\", result: " + str(err))
 				continue
-		echo(str(loaded) + " modules loaded")
+		echo(1,str(loaded) + " modules loaded")
 	else:
-		echo("no modules found")
-	echo("block \"" + target + "\" loaded")
+		echo(1,"no modules found")
+	echo(1,"block \"" + target + "\" loaded")
 	return
 
 
@@ -795,7 +845,7 @@ def change_dir(cmd): # change work path
 	target = ""
 	for i in opts:
 		if i in ("-h","--help"):
-			echo("""Change ICLab working path
+			echo(1,"""Change ICLab working path
 
 Usage: chd -t <target_path>
 
@@ -809,17 +859,17 @@ Examples:
 		elif i in ("-t","--target"):
 			target = opts[i]
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if len(target) == 0:
-		echo("[ERROR] syntax error, try \"-h\" tag for help")
+		echo(1,"[ERROR] syntax error, try \"-h\" tag for help")
 		return
 	if os.path.exists(target):
 		os.chdir(target)
 		PATH = os.getcwd()
 		return
 	else:
-		echo("[ERROR] \"" + target + "\" not found")
+		echo(1,"[ERROR] \"" + target + "\" not found")
 		return
 
 
@@ -829,7 +879,7 @@ def ch_pwd(cmd): # change block password
 	opts = get_args(cmd)
 	for i in opts:
 		if i in ("-h,--help"):
-			echo("""ICLab Block User Password Editor
+			echo(1,"""ICLab Block User Password Editor
 
 Usage: chpwd
 
@@ -839,21 +889,21 @@ Examples:
  > chpwd
 """)
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if type("") == type(BLOCK):
-		echo("[ERROR] no block loaded yet, please load a block first")
+		echo(1,"[ERROR] no block loaded yet, please load a block first")
 		return
 	else:
 		pass
 	try:
 		temp = input("Old password: ")
 	except KeyboardInterrupt:
-		print("")
-		echo("keyboard interrupt detected, exiting")
+		echo(0,"")
+		echo(1,"keyboard interrupt detected, exiting")
 		return
 	if temp != PWD:
-		echo("[ERROR] wrong password")
+		echo(1,"[ERROR] wrong password")
 		return
 	else:
 		pass
@@ -864,17 +914,17 @@ Examples:
 			temp = input("Verify password: ")
 			wait = False
 			if temp != password:
-				echo("password verification failed, please try again")
+				echo(1,"password verification failed, please try again")
 				wait = True
 			if len(password) < 4:
-				echo("password length must be at least 4 words")
+				echo(1,"password length must be at least 4 words")
 				wait = True
 			if len(password) > 30:
-				echo("password length must be less than 30 words")
+				echo(1,"password length must be less than 30 words")
 				wait = True
 	except KeyboardInterrupt:
-		print("")
-		echo("keyboard interrupt detected, exiting")
+		echo(0,"")
+		echo(1,"keyboard interrupt detected, exiting")
 		return
 	try:
 		configs = BLOCK.read("user/user.json")
@@ -886,24 +936,24 @@ Examples:
 		else:
 			pass
 	except Exception as err:
-		echo("[ERROR] Failed to read block config file: " + str(err) + ", file may be broken")
+		echo(1,"[ERROR] Failed to read block config file: " + str(err) + ", file may be broken")
 	new_coder = iccode(temp)
 	pwd = temp
 	pathx = sys.path[0] + os.sep + "temp" + os.sep + "extracts" + os.sep
-	echo("updating data")
+	echo(1,"updating data")
 	configs.update({"iccode_key":temp})
-	echo("encoding data")
+	echo(1,"encoding data")
 	temp = (json.dumps(configs)).encode()
-	echo("encrypting")
+	echo(1,"encrypting")
 	coder.reset()
 	temp = coder.encode(temp)
-	echo("extracting block")
+	echo(1,"extracting block")
 	extract_block()
-	echo("editing file")
+	echo(1,"editing file")
 	f = open(pathx + os.sep + "user" + os.sep + "user.json","wb")
 	f.write(temp)
 	f.close()
-	echo("encrypting files in new password")
+	echo(1,"encrypting files in new password")
 	files = scan_path(pathx,"all")
 	patho = sys.path[0] + os.sep + "temp" + os.sep + "new_extracts" + os.sep
 	if os.path.exists(patho):
@@ -928,12 +978,12 @@ Examples:
 		f2.close()
 	shutil.rmtree(pathx)
 	os.rename(patho,"temp" + os.sep + "extracts")
-	echo("updating block")
+	echo(1,"updating block")
 	update_block()
-	echo("reloading block")
+	echo(1,"reloading block")
 	unload_block("")
 	load_block("-t \"" + BLOCK + "\" -p \"" + pwd + "\"")
-	echo("password changed")
+	echo(1,"password changed")
 
 
 
@@ -945,11 +995,11 @@ def edit_userconf(cmd): # edit user config
 	edits = None
 	lists = False
 	if opts == {}:
-		echo("[ERROR] syntax error, try \"-h\" tag for help")
+		echo(1,"[ERROR] syntax error, try \"-h\" tag for help")
 		return
 	for i in opts:
 		if i in ("-h,--help"):
-			echo("""ICLab Block User Configs Editor
+			echo(1,"""ICLab Block User Configs Editor
 
 Usage: edconf <-e,-d> <key_name> [-l,-v]
 
@@ -972,10 +1022,10 @@ Examples:
 		elif i in ("-v","--value"):
 			edits = opts[i]
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if type("") == type(BLOCK):
-		echo("[ERROR] no block loaded yet, please load a block first")
+		echo(1,"[ERROR] no block loaded yet, please load a block first")
 		return
 	else:
 		pass
@@ -989,55 +1039,55 @@ Examples:
 		else:
 			pass
 	except Exception as err:
-		echo("[ERROR] Failed to read block config file: " + str(err) + ", file may be broken")
+		echo(1,"[ERROR] Failed to read block config file: " + str(err) + ", file may be broken")
 	if len(edit_key) > 0:
 		if edit_key == "iccode_key":
-			echo("[WARNING] you are trying to edit block password key, this editor is not allowed to do that, try \"chpwd\" command instead")
+			echo(1,"[WARNING] you are trying to edit block password key, this editor is not allowed to do that, try \"chpwd\" command instead")
 		else:
 			if edits == None:
 				edits = input("Values for \"" + edit_key + "\": ")
 			else:
 				pass
 			configs.update({edit_key:edits})
-			echo("key \"" + edit_key + "\" = \"" + edits + "\" updated")
+			echo(1,"key \"" + edit_key + "\" = \"" + edits + "\" updated")
 	if len(delete_key) > 0:
 		if delete_key == "iccode_key":
-			echo("[WARNING] operation rejected, block password key can't be deleted")
+			echo(1,"[WARNING] operation rejected, block password key can't be deleted")
 		elif delete_key == "username":
-			echo("[WARNING] operation rejected, block username can't be deleted")
+			echo(1,"[WARNING] operation rejected, block username can't be deleted")
 		else:
 			if not delete_key in configs:
-				echo("key \"" + delete_key + "\" dosen't exist, can't delete")
+				echo(1,"key \"" + delete_key + "\" dosen't exist, can't delete")
 			else:
 				configs.pop(delete_key)
-				echo("key \"" + delete_key + "\" deleted")
+				echo(1,"key \"" + delete_key + "\" deleted")
 				delete_key = None
 	if edits != None or delete_key == None:
-		echo("saving changes to block, extracting")
+		echo(1,"saving changes to block, extracting")
 		extract_block()
 		pathx = sys.path[0] + os.sep + "temp" + os.sep + "extracts" + os.sep
-		echo("encoding data")
+		echo(1,"encoding data")
 		temp = (json.dumps(configs)).encode()
-		echo("encrypting")
+		echo(1,"encrypting")
 		coder.reset()
 		temp = coder.encode(temp)
-		echo("editing file")
+		echo(1,"editing file")
 		f = open(pathx + os.sep + "user" + os.sep + "user.json","wb")
 		f.write(temp)
 		f.close()
-		echo("updating block")
+		echo(1,"updating block")
 		update_block()
-		echo("changes updated")
+		echo(1,"changes updated")
 	if lists:
-		echo("configs key in block:")
-		print(" |\t[Key_names]\t| \t\t[Values]\t\t|")
+		echo(1,"configs key in block:")
+		echo(0," |\t[Key_names]\t| \t\t[Values]\t\t|")
 		for i in configs:
 			temp = " | " + i
 			if temp != " | iccode_key":
-				print(temp + (3-int(len(temp)/8))*"\t" + "| " + str(configs[i]) + (5-int((len(configs[i])+2)/8))*"\t" + "|")
+				echo(0,temp + (3-int(len(temp)/8))*"\t" + "| " + str(configs[i]) + (5-int((len(configs[i])+2)/8))*"\t" + "|")
 			else:
-				print(temp + (3-int(len(temp)/8))*"\t" + "| " + "*"*len(configs[i]) + (5-int((len(configs[i])+2)/8))*"\t" + "|")
-		print("")
+				echo(0,temp + (3-int(len(temp)/8))*"\t" + "| " + "*"*len(configs[i]) + (5-int((len(configs[i])+2)/8))*"\t" + "|")
+		echo(0,"")
 
 
 
@@ -1046,7 +1096,7 @@ def block_create(cmd): # block file create guide
 	opts = get_args(cmd)
 	for i in opts:
 		if i in ("-h","--help"):
-			echo("""ICLab Block Create Guide
+			echo(1,"""ICLab Block Create Guide
 
 Usage: createblock
 
@@ -1055,10 +1105,10 @@ Usage: createblock
 """)
 			return
 		else:
-			echo("[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
-	echo("=+= ICLab Block Create Guide =+=")
-	echo("please follow the steps to create a block file")
+	echo(1,"=+= ICLab Block Create Guide =+=")
+	echo(1,"please follow the steps to create a block file")
 	wait = True
 	# input file name
 	try:
@@ -1072,19 +1122,19 @@ Usage: createblock
 			temp = ("/","\\","\"","*","|","?","<",">",":")
 			for i in temp:
 				if i in blk_name:
-					echo("block file name mustn't include '" + i + "'")
+					echo(1,"block file name mustn't include '" + i + "'")
 					wait = True
 					break
 	except KeyboardInterrupt:
-		print("")
-		echo("keyboard interrupt detected, stopping create block")
+		echo(0,"")
+		echo(1,"keyboard interrupt detected, stopping create block")
 		return
 	# input username
 	try:
 		username = input("Username: ")
 	except KeyboardInterrupt:
-		print("")
-		echo("keyboard interrupt detected, stopping create block")
+		echo(0,"")
+		echo(1,"keyboard interrupt detected, stopping create block")
 	# input iccode key
 	try:
 		wait = True
@@ -1093,53 +1143,53 @@ Usage: createblock
 			temp = input("Verify password: ")
 			wait = False
 			if temp != password:
-				echo("password verification failed, please try again")
+				echo(1,"password verification failed, please try again")
 				wait = True
 			if len(password) < 4:
-				echo("password length must be at least 4 words")
+				echo(1,"password length must be at least 4 words")
 				wait = True
 			if len(password) > 30:
-				echo("password length must be less than 30 words")
+				echo(1,"password length must be less than 30 words")
 				wait = True
 	except KeyboardInterrupt:
-		print("")
-		echo("keyboard interrupt detected, stopping create block")
-	echo("Block basic info:")
-	print(" File name: " + blk_name)
-	print(" Username : " + username)
-	print(" Password : " + ("*" * len(password)))
+		echo(0,"")
+		echo(1,"keyboard interrupt detected, stopping create block")
+	echo(1,"Block basic info:")
+	echo(0," File name: " + blk_name)
+	echo(0," Username : " + username)
+	echo(0," Password : " + ("*" * len(password)))
 	try:
 		temp = input("(press ENTER to continue, Ctrl+C to stop)")
 	except KeyboardInterrupt:
-		print("")
-		echo("keyboard interrupt detected, stopping create block")
-	echo("releasing basic config file")
+		echo(0,"")
+		echo(1,"keyboard interrupt detected, stopping create block")
+	echo(1,"releasing basic config file")
 	temp = {"username":username,"iccode_key":password}
 	try:
 		f = open("./temp/user_t","w")
 		json.dump(temp,f,indent=2)
 		f.close()
-		echo("encrypting file")
+		echo(1,"encrypting file")
 		iccode_en(password,"./temp/user_t","./temp/user.json")
 	except Exception as err:
-		echo("[ERROR] failed to write file, result: " + str(err))
+		echo(1,"[ERROR] failed to write file, result: " + str(err))
 		return
-	echo("creating blank block file \"" + blk_name + "\"")
+	echo(1,"creating blank block file \"" + blk_name + "\"")
 	try:
 		blk = block.create(blk_name)
-		echo("writing data to block file")
+		echo(1,"writing data to block file")
 		blk.write("temp/user.json","user/user.json")
 		blk.close()
 	except Exception as err:
-		echo("[ERROR] Failed to create block file, result: " + str(err))
+		echo(1,"[ERROR] Failed to create block file, result: " + str(err))
 		return
-	echo("block file create successfully")
-	echo("cleanning up caches")
+	echo(1,"block file create successfully")
+	echo(1,"cleanning up caches")
 	try:
 		os.remove("temp/user_t")
 		os.remove("temp/user.json")
 	except Exception as err:
-		echo("Failed to clean caches, result: " + str(err))
+		echo(1,"Failed to clean caches, result: " + str(err))
 		return
 	return
 

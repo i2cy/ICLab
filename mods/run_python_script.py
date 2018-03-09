@@ -4,7 +4,7 @@ def run_py(cmd): # run python scripts
 	opts = get_args(cmd)
 	for i in opts:
 		if i in ("-h","--help"):
-			print("""Python Script Executer
+			echo(0,"""Python Script Executer
 
 Usage: rpy <command>
 
@@ -20,4 +20,4 @@ Example:
 	try:
 		exec(cmd)
 	except Exception as err:
-		echo("[ERROR] failed to execute script, result: " + str(err))
+		echo(1,"[ERROR] failed to execute script, result: " + str(err))

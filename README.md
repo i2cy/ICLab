@@ -1,6 +1,7 @@
 # ICLab Command Shell Working Table *(icshell)* #
   It is kind of like a cmd shell of *system shell* + *custom shell* + *custom module(which is ****VERY SCALABLE****)*,   
-  and its custom stuff(such as modules, userdata) will be encrypted with your own password so that your data will be very safe(I do believe my encryption algorithm is awesome)
+  and its custom stuff(such as modules, userdata) will be encrypted with your own password so that your data will be    
+  very safe(I do believe my encryption algorithm is awesome)
 
 
 ## Instructions ##
@@ -13,7 +14,9 @@
 ## Block Instructions ##
   Block is a ICLab's encrypted storage zip file, which can be create by using command   
   **"createblock"** in icshell to create one
-  
+- To redirect console message to a file please use "**>**", with a formant like **>** *[target_path]*   
+  example:   
+    scan -t ./ >result.txt
 
 
 ## Module Instructions ##

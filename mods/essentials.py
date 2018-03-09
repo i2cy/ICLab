@@ -6,6 +6,4 @@ class tagger: # edit global data tags
 		del name, value
 		globals().update(locals())
 	def remove(name):
-		exec("del " + name)
-		del name
-		globals().update(locals())
+		globals().pop(name)
