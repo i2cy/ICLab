@@ -10,7 +10,7 @@
 
 # global tags:
 
-VERSION = "1.1.0"
+VERSION = "1.1.4"
 
 
 
@@ -266,6 +266,7 @@ def load_blockinfo(key,name): # block info loader
 	data = blk.read("user/user.json")
 	coder = iccode(key)
 	data = coder.decode(data)
+	data = data.decode()
 	data = json.loads(data)
 	PWD = ""
 	if data["iccode_key"] == key:
@@ -483,8 +484,10 @@ def init(): # initializer
 	if OS == "win":
 		os.system("title " + TITLE)
 		echo(1,"title setting status: PASS")
+		CMDS.update({"chdir":CMDS["chd"]})
 	else:
-		pass
+		CMDS.update({"cd":CMDS["chd"]})
+	CMDS.pop("chd")
 	# work path check
 	if os.getcwd() != sys.path[0] and sys.path[0] != "":
 		echo(1,"moving work path to \"" + sys.path[0] + "\"")
@@ -509,9 +512,7 @@ def init(): # initializer
 
 
 
-def main(): # main scripts
-	init()
-	# blk package search
+def search_blk(): # block search & load guide
 	global BLOCK
 	files = scan_path("." + os.sep,"top")[1]
 	blocks = []
@@ -559,6 +560,13 @@ def main(): # main scripts
 		except KeyboardInterrupt:
 			echo(0,"")
 			echo(1,"keyboard interrupt detected, skipping block loading")
+
+
+
+
+def main(): # main scripts
+	init()
+	search_blk()
 	cmd_loop()
 	end()
 
@@ -847,23 +855,19 @@ def change_dir(cmd): # change work path
 		if i in ("-h","--help"):
 			echo(1,"""Change ICLab working path
 
-Usage: chd -t <target_path>
+Usage: <chdir/cd> <target_path> [-h]
 
- -t --target <target_path>      - target path
  -h --help                      - display this page
 
 Examples:
- >chd -t "/home"
+ >cd "/home"
 """)
 			return
-		elif i in ("-t","--target"):
-			target = opts[i]
 		else:
 			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
 	if len(target) == 0:
-		echo(1,"[ERROR] syntax error, try \"-h\" tag for help")
-		return
+		target = cmd
 	if os.path.exists(target):
 		os.chdir(target)
 		PATH = os.getcwd()
@@ -930,6 +934,7 @@ Examples:
 		configs = BLOCK.read("user/user.json")
 		coder = iccode(PWD)
 		configs = coder.decode(configs)
+		configs = configs.decode()
 		configs = json.loads(configs)
 		if PWD != configs["iccode_key"]:
 			raise Exception("user config file value didn't match")
@@ -977,7 +982,7 @@ Examples:
 		f1.close()
 		f2.close()
 	shutil.rmtree(pathx)
-	os.rename(patho,"temp" + os.sep + "extracts")
+	os.rename(patho,pathx)
 	echo(1,"updating block")
 	update_block()
 	echo(1,"reloading block")
@@ -1033,6 +1038,7 @@ Examples:
 		configs = BLOCK.read("user/user.json")
 		coder = iccode(PWD)
 		configs = coder.decode(configs)
+		configs = configs.decode()
 		configs = json.loads(configs)
 		if PWD != configs["iccode_key"]:
 			raise Exception("user config file value didn't match")
