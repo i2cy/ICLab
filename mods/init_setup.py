@@ -24,6 +24,7 @@ Examples:
 		configs = BLOCK.read("user/user.json")
 		coder = iccode(PWD)
 		configs = coder.decode(configs)
+		configs = configs.decode()
 		configs = json.loads(configs)
 		if PWD != configs["iccode_key"]:
 			raise Exception("user config file value didn't match")
@@ -43,6 +44,7 @@ Examples:
 		configs = BLOCK.read("user/user.json")
 		coder = iccode(PWD)
 		configs = coder.decode(configs)
+		configs = configs.decode()
 		configs = json.loads(configs)
 		if PWD != configs["iccode_key"]:
 			raise Exception("user config file value didn't match")
