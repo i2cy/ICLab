@@ -10,7 +10,7 @@
 
 # global tags:
 
-VERSION = "1.1.4"
+VERSION = "1.1.5"
 
 
 
@@ -337,7 +337,20 @@ def cmd_loop(): # command shell loop
 						else:
 							a = i
 						args += a
-				try:
+				if not DEBUG:
+					try:
+						try:
+							exec((CMDS[cmd])[0]+ "(\"" + args + "\")")
+							if ECHO == write_to:
+								ECHO = True
+						except KeyboardInterrupt:
+							ECHO = True
+							echo(1,"keyboard interrupt detected, exitting")
+							continue
+					except Exception as err:
+						ECHO = True
+						echo(1,"[ERROR] Error while executing \"" + cmd + "\", result: " + str(err))
+				else:
 					try:
 						exec((CMDS[cmd])[0]+ "(\"" + args + "\")")
 						if ECHO == write_to:
@@ -346,9 +359,6 @@ def cmd_loop(): # command shell loop
 						ECHO = True
 						echo(1,"keyboard interrupt detected, exitting")
 						continue
-				except Exception as err:
-					ECHO = True
-					echo(1,"[ERROR] Error while executing \"" + cmd + "\", result: " + str(err))
 			else:
 				try:
 					os.system(temp)
@@ -452,7 +462,8 @@ def read_path(path): # Path String Reader
 
 
 def init(): # initializer
-	global sys, os, time, zipfile, json, shutil, OS, BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO
+	global sys, os, time, zipfile, json, shutil, OS, BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG
+	DEBUG = False
 	HEAD = "ICLab"
 	BLOCK = ""
 	ECHO = True
@@ -464,7 +475,8 @@ def init(): # initializer
 	"unloadblk":("unload_block","Unload a ICLab block"),
 	"edmods":("edit_module","Block module manager"),
 	"edconf":("edit_userconf","Block user config editor"),
-	"chpwd":("ch_pwd","Block password change guide")}
+	"chpwd":("ch_pwd","Block password change guide"),
+	"icdebug":("iclab_debug","ICLab debug mode")}
 	echo(1,"Initilizing...")
 	import sys, os, time, zipfile, json, shutil
 	# python version check
@@ -600,6 +612,18 @@ def exit_iclab(cmd): # exit iclab
 	echo(1,"cleanning up caches")
 	shutil.rmtree(sys.path[0] + os.sep + "temp")
 	end()
+
+
+
+
+def iclab_debug(cmd): # iclab debug mode switch
+	global DEBUG
+	if DEBUG:
+		DEBUG = False
+		echo(1,"debug mode OFF")
+	else:
+		DEBUG = True
+		echo(1,"debug mode ON")
 
 
 
