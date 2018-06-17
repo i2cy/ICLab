@@ -8,9 +8,11 @@
 # +++*** [ SOURCE VERSION ] ***+++
 
 
+
+
 # global tags:
 
-VERSION = "1.1.5"
+VERSION = "1.2.4"
 
 
 
@@ -153,6 +155,76 @@ class iccode: # Simple Data encoder/decoder
 
 
 
+class _Getch: # main functions (usage: getch = _Getch()|while True:|  ch = getch())
+	def __init__(self):
+		try:
+			self.impl = _GetchWindows()
+		except ImportError:
+			self.impl = _GetchUnix()
+	def __call__(self):
+		return self.impl()
+
+
+
+
+class _GetchUnix: # sub class of nonblocking input to get character from Unix
+	def __init__(self):
+		import tty, sys
+	def __call__(self):
+		import sys, tty, termios
+		fd = sys.stdin.fileno()
+		old_settings = termios.tcgetattr(fd)
+		try:
+			tty.setraw(sys.stdin.fileno(), termios.TCSANOW)
+			ch = sys.stdin.read(1)
+		finally:
+			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+		return ch
+
+
+
+
+class _GetchWindows: # sub class of nonblocking input to get character from Windows
+	def __init__(self):
+		import msvcrt
+	def __call__(self):
+		import msvcrt
+		temp = msvcrt.getch()
+		if temp == b"\x00":
+			return ""
+		else:
+			return temp.decode()
+
+
+
+
+class temp_memo: # temp memory class
+	def __init__(self):
+		self.data = {}
+	def set(self,data):
+		self.data.update(data)
+	def read(self,name=None):
+		if name in self.data:
+			get = self.data[name]
+			return get
+		else:
+			raise Exception("\"" + name + "\" not found")
+		if name == None:
+			return self.data
+	def read_pop(self,name=None):
+		res = read(name)
+		if name == None:
+			for i in res:
+				pop(i)
+		else:
+			pop(name)
+		return res
+	def pop(self,name):
+		self.data.pop(name)
+
+
+
+
 def echo(mode,msg): # console message printer ( can be redefine by package )
 	global ECHO
 	if mode == 1:
@@ -255,7 +327,9 @@ def iccode_en(key ,target_file, finnal_file): # iccode file encrypter
 def execute(cmd): # execute command and update loacls to globals
 	__name__ = "__module__"
 	exec(cmd)
-	globals().update(locals())
+	del __name__
+	locals().pop("cmd")
+	return locals()
 
 
 
@@ -402,6 +476,8 @@ def get_args(opt): # decode command shell's argument(s)
 		if "-" == i[0]:
 			argv = i
 			res.update({argv:""})
+	if DEBUG:
+		print(res)
 	return res
 
 
@@ -461,12 +537,39 @@ def read_path(path): # Path String Reader
 
 
 
+def passwd_input(head=""): # password input function, cover inputs
+	sys.stdout.write(head)
+	sys.stdout.flush()
+	getch = _Getch()
+	res = ''
+	while True:
+		ch = getch()
+		if ch == '\r':
+			sys.stdout.write('\n')
+			return res
+		elif ch in (chr(127),"\b"):
+			res = res[:-1]
+			sys.stdout.write('\b \r' + head + '*'*len(res))
+			sys.stdout.flush()
+		elif ch in (chr(3),chr(4)):
+			raise KeyboardInterrupt()
+		elif ch == chr(26):
+			exit()
+		else:
+			res += ch
+			sys.stdout.write('\b \r' + head + '*'*len(res))
+			sys.stdout.flush()
+
+
+
+
 def init(): # initializer
-	global sys, os, time, zipfile, json, shutil, OS, BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG
+	global sys, os, time, zipfile, json, shutil, OS,threading , BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG, C_MODE
 	DEBUG = False
 	HEAD = "ICLab"
 	BLOCK = ""
 	ECHO = True
+	COVER = False
 	CMDS = {"exit":("exit_iclab","Exit ICLab working table"),
 	"createblock":("block_create","ICLab Block create guide"),
 	"ichelp":("iclab_help","List all available ICLab commands"),
@@ -478,7 +581,8 @@ def init(): # initializer
 	"chpwd":("ch_pwd","Block password change guide"),
 	"icdebug":("iclab_debug","ICLab debug mode")}
 	echo(1,"Initilizing...")
-	import sys, os, time, zipfile, json, shutil
+	import sys, os, time, zipfile, json, shutil, threading
+	echo(1,'ICLab ( Version: ' + VERSION + ' )')
 	# python version check
 	if float(sys.version[:3]) < 3.4:
 		echo(1,"ICLab only support Python3.4+ environment, please go visit https://www.python.org/downloads download a Python3.4+ if you haven't installed yet")
@@ -492,6 +596,13 @@ def init(): # initializer
 	else:
 		OS = "linux"
 	echo(1,"os name checked: " + OS)
+	# compatibility check ( serch a file in ./ named "c_mode.icl" )
+	if os.path.exists("./c_mode.icl"):
+		C_MODE = True
+		echo(1,"compatibility mode: activated")
+	else:
+		C_MODE = False
+		echo(1,"compatibility mode: unactivated")
 	# set title if windows
 	if OS == "win":
 		os.system("title " + TITLE)
@@ -560,7 +671,7 @@ def search_blk(): # block search & load guide
 		wait = True
 		try:
 			while wait:
-				temp = input("Block-Password: ")
+				temp = passwd_input("Block-Password: ")
 				wait = False
 				try:
 					load_block("-t \"" + BLOCK + "\" -p \"" + temp + "\"")
@@ -601,7 +712,7 @@ def iclab_help(cmd): # iclab help
 	cmds.sort()
 	for i in cmds:
 		temp = "  " + i
-		echo(0,temp + (5-int(len(temp)/8))*"\t" + "- " + (CMDS[i])[1])
+		echo(0,temp + (3-int(len(temp)/8))*"\t" + "- " + (CMDS[i])[1])
 	echo(0,"")
 	return
 
@@ -609,6 +720,11 @@ def iclab_help(cmd): # iclab help
 
 
 def exit_iclab(cmd): # exit iclab
+	if type(BLOCK) != type(""):
+		echo(1,"unloading block")
+		unload_block("")
+	else:
+		pass
 	echo(1,"cleanning up caches")
 	shutil.rmtree(sys.path[0] + os.sep + "temp")
 	end()
@@ -791,9 +907,10 @@ Examples:
 
 
 def load_block(cmd): # load block
-	global BLOCK, CMDS, INFO
+	global BLOCK, CMDS, INFO, RLTS
 	opts = get_args(cmd)
 	target = ""
+	temp = None
 	if opts == {}:
 		echo(1,"[ERROR] syntax error, try \"-h\" tag for help")
 		return
@@ -828,6 +945,10 @@ Examples:
 		return
 	else:
 		pass
+	if temp == None:
+		temp = passwd_input("Block-Password: ")
+	else:
+		pass
 	echo(1,"loading block infos...")
 	try:
 		blk = load_blockinfo(temp,target)
@@ -850,19 +971,91 @@ Examples:
 		echo(1,str(len(mods)) + " modules found, loading modules...")
 		loaded = 0
 		coder = iccode(PWD)
+		mod_relateds = {}
+		mod_relateds_ = {}
 		for i in mods:
 			try:
 				temp = BLOCK.read(i)
 				temp = coder.decode(temp)
 				coder.reset()
-				execute(temp)
+				imported = execute(temp)
+				globals().update(imported)
 				CMDS.update(INFO)
+				mod_relateds.update({i:RLTS})
+				mod_relateds_.update({i:RLTS})
 				loaded += 1
-				del INFO
 			except Exception as err:
 				echo(1,"[WARNING] failed to load \"" + i + "\", result: " + str(err))
 				continue
+		echo(1,"checking relateds...")
+		for i in mod_relateds:
+			cls = (mod_relateds[i])["cls"]
+			funcs = (mod_relateds[i])['funcs']
+			vars = (mod_relateds[i])['vars']
+			missed = [[],[],[]]
+			for i2 in cls:
+				if i2 in globals().keys():
+					pass
+				else:
+					missed[0].append(i2)
+			for i2 in funcs:
+				if i2 in globals().keys():
+					pass
+				else:
+					missed[1].append(i2)
+			for i2 in vars:
+				if i2 in globals().keys():
+					pass
+				else:
+					missed[2].append(i2)
+			if missed == [[],[],[]]:
+				pass
+			else:
+				msg = "module \"" + i + "\" need extra"
+				if missed[0] != []:
+					msg += " class(es):"
+					for i2 in missed[0]:
+						msg += " \"" + i2 + "\""
+					msg += ","
+				if missed[1] != []:
+					msg += " function(s):"
+					for i2 in missed[1]:
+						msg += " \"" + i2 + "\""
+					msg += ","
+				if missed[2] != []:
+					msg += " variable(s):"
+					for i2 in missed[2]:
+						msg += " \"" + i2 + "\""
+					msg += ","
+				msg = msg[:-1]
+				msg += " to execute, unloading \"" + i + "\"..."
+				echo(1,msg)
+				loaded -= 1
+				mod_relateds_.pop(i)
+				others = []
+				for i2 in ("cls","funcs","vars"):
+					for i3 in mod_relateds_:
+						others.append((mod_relateds_[i3])[i2])
+				temp = BLOCK.read(i)
+				temp = coder.decode(temp)
+				coder.reset()
+				imported = execute(temp)
+				if imported['INFO'] == {}:
+					pass
+				else:
+					CMDS.pop(list((imported['INFO']).keys())[0])
+				imported.pop("INFO")
+				imported.pop("RLTS")
+				for i2 in imported:
+					if i2 in others or i2 in OG:
+						pass
+					else:
+						globals().pop(i2)
 		echo(1,str(loaded) + " modules loaded")
+		if loaded != 0:
+			del INFO, RLTS
+		else:
+			pass
 	else:
 		echo(1,"no modules found")
 	echo(1,"block \"" + target + "\" loaded")
@@ -1169,8 +1362,8 @@ Usage: createblock
 	try:
 		wait = True
 		while wait:
-			password = input("Password: ")
-			temp = input("Verify password: ")
+			password = passwd_input("Password: ")
+			temp = passwd_input("Verify password: ")
 			wait = False
 			if temp != password:
 				echo(1,"password verification failed, please try again")
