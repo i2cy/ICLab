@@ -538,27 +538,31 @@ def read_path(path): # Path String Reader
 
 
 def passwd_input(head=""): # password input function, cover inputs
-	sys.stdout.write(head)
-	sys.stdout.flush()
-	getch = _Getch()
-	res = ''
-	while True:
-		ch = getch()
-		if ch == '\r':
-			sys.stdout.write('\n')
-			return res
-		elif ch in (chr(127),"\b"):
-			res = res[:-1]
-			sys.stdout.write('\b \r' + head + '*'*len(res))
-			sys.stdout.flush()
-		elif ch in (chr(3),chr(4)):
-			raise KeyboardInterrupt()
-		elif ch == chr(26):
-			exit()
-		else:
-			res += ch
-			sys.stdout.write('\b \r' + head + '*'*len(res))
-			sys.stdout.flush()
+	if C_MODE:
+		res = input(head)
+		return res
+	else:
+		sys.stdout.write(head)
+		sys.stdout.flush()
+		getch = _Getch()
+		res = ''
+		while True:
+			ch = getch()
+			if ch == '\r':
+				sys.stdout.write('\n')
+				return res
+			elif ch in (chr(127),"\b"):
+				res = res[:-1]
+				sys.stdout.write('\b \r' + head + '*'*len(res))
+				sys.stdout.flush()
+			elif ch in (chr(3),chr(4)):
+				raise KeyboardInterrupt()
+			elif ch == chr(26):
+				exit()
+			else:
+				res += ch
+				sys.stdout.write('\b \r' + head + '*'*len(res))
+				sys.stdout.flush()
 
 
 
