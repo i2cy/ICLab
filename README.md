@@ -31,7 +31,7 @@
 - example(***example_mod.py*** in ***mods***):   
 ~~~
 INFO = {"example":("test","This is an example mod")}
-RLTS = {"cls":(),"funcs":("echo"),"vars":()}
+RLTS = {"cls":(),"funcs":("echo",),"vars":()}
 
 def test(cmd):
 	echo(cmd)
