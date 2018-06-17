@@ -1,4 +1,5 @@
 INFO = {"rpy":("run_py","Run a python scripts with ICLab environment")}
+RLTS = {"cls":(),"funcs":("echo","get_args"),"vars":()}
 
 def run_py(cmd): # run python scripts
 	opts = get_args(cmd)

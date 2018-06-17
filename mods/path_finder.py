@@ -1,4 +1,5 @@
 INFO = {"scan":("path_find","Scan a target path and its sub files")}
+RLTS = {"cls":("os",),"funcs":("echo","get_args"),"vars":()}
 
 def path_find(cmd): # path finder
 	kwd = ""

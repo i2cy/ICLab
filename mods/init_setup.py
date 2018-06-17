@@ -1,4 +1,5 @@
 INFO = {"initwin":("init_window","Window initializer(only for Windows)")}
+RLTS = {"cls":("iccode","os","json"),"funcs":("echo","get_args","edit_userconf"),"vars":("BLOCK","ECHO","OS")}
 
 def init_window(cmd):
 	global ECHO

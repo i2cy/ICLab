@@ -1,4 +1,5 @@
 INFO = {}
+RLTS = {"cls":(),"funcs":(),"vars":()}
 
 class tagger: # edit global data tags
 	def edit(name,value):

@@ -1,5 +1,6 @@
 INFO = {"netscan":("icy_shadow_net_scanner","ISPY TCP scanner")}
-ISPY_VERSION = "1.1"
+RLTS = {"cls":("temp_struck","threading","socket","time"),"funcs":("echo","get_args"),"vars":()}
+ISPY_VERSION = "1.3"
 
 
 
@@ -8,12 +9,13 @@ def icy_shadow_net_scanner(cmd): # main cmd part
 	opts = get_args(cmd)
 	if opts == {}:
 		echo(1,"[ERROR] syntax error, try \"-h\" fo help")
+		return
 	scan_part = tcp_net_scanner()
 	ips = False
 	ports = False
 	for i in opts:
 		if i in ('-h','--help'):
-			echo(1,"""Icy Shadow TCP Network Scanner
+			echo(1,"""Icy Shadow TCP Network Scanner [v.""" + ISPY_VERSION + """]
 
 usage: netscan <-t> <target_ip> <-p> <target_port> [-m] <message> [-timeout] <timeout> [-maxthreads] <max_thread_number> [-c] <coding_type> [-o]
 
@@ -65,14 +67,33 @@ Example:
 		else:
 			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
-	if ":" in ips:
-			ips = ips.split(":")
+	try:
+		temp = ips.split(".")
+		temp2 = None
+		if len(temp) == 4:
+			for i in temp:
+				if i == "*":
+					pass
+				else:
+					temp2 = int(i)
+					if temp2 in range(0,256):
+						pass
+					else:
+						temp = False
+						break
+		else:
+			temp = False
+	except Exception:
+		temp = False
+	if temp != False:
+			ips = ips.split(".")
 	else:
 		try:
 			ips = (((socket.getaddrinfo(ips,22)[0])[4])[0])
 			ips = ips.split(".")
 		except Exception as err:
 			echo(1,"[ERROR] failed to connect to \"" + str(ips) + "\", feedback: " + str(err))
+			return
 	if ips != False and ports != False:
 		try:
 			echo(1,"scanning target: " + ips[0] + "." + ips[1] + "." + ips[2] + "." + ips[3] + "(" + ports + ")")
