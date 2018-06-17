@@ -38,6 +38,6 @@ def test(cmd):
 ~~~
 
 ## Compatibility Mode ##
-- to enable *Compatibility Mode*, you need to create a file named "c_mode.icl" in the folder which is the same as "Table.py"
+- to enable **Compatibility Mode**, you need to create a file named **"c_mode.icl"** in the *folder* which is the same as "Table.py"
 - *Compatibility Mode* is need to be used when you find you can't run *ICLab* normally. It will disable some features such as
   "cover_input" to make you can run ICLab normally
