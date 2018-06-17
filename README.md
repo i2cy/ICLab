@@ -21,14 +21,23 @@
 
 ## Module Instructions ##
 - every module must be python scripts(definitely)
-- every module must has a global tag **INFO** in it    
-  ***INFO*** is a dict-type tag with a formant of *{<command_name>:(<function_name>,<short_description>)}*    
-  which is used to register the command in module
+- every module must has global tags **INFO** and **RLTS** in it    
+  ***INFO*** is a dict-type tag with a formant like this: *{<command_name>:(<function_name>,<short_description>)}*
+  which is used to register the command in module   
+  ***RLTS*** is a dict_type tag with a formant like this: *{"cls":(<related_classes>,...),"funcs":(<related_functions>,...),
+  "vars":(<related_variables>,...)}*
+  which is used to declare the relateds that this module need to have
 - to install a module, please load a **block file** first and use the command of **"edmods"**
 - example(***example_mod.py*** in ***mods***):   
 ~~~
 INFO = {"example":("test","This is an example mod")}
+RLTS = {"cls":(),"funcs":("echo"),"vars":()}
 
 def test(cmd):
 	print(cmd)
 ~~~
+
+## Compatibility Mode ##
+- to enable *Compatibility Mode*, you need to create a file named "c_mode.icl" in the folder which is the same as "Table.py"
+- *Compatibility Mode* is need to be used when you find you can't run *ICLab* normally. It will disable some features such as
+  "cover_input" to make you can run ICLab normally
