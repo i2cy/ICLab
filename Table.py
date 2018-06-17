@@ -596,13 +596,6 @@ def init(): # initializer
 	else:
 		OS = "linux"
 	echo(1,"os name checked: " + OS)
-	# compatibility check ( serch a file in ./ named "c_mode.icl" )
-	if os.path.exists("./c_mode.icl"):
-		C_MODE = True
-		echo(1,"compatibility mode: activated")
-	else:
-		C_MODE = False
-		echo(1,"compatibility mode: unactivated")
 	# set title if windows
 	if OS == "win":
 		os.system("title " + TITLE)
@@ -618,6 +611,13 @@ def init(): # initializer
 	else:
 		echo(1,"work path check: PASS")
 	PATH = os.getcwd()
+	# compatibility check ( serch a file in ./ named "c_mode.icl" )
+	if os.path.exists("./c_mode.icl"):
+		C_MODE = True
+		echo(1,"compatibility mode: activated")
+	else:
+		C_MODE = False
+		echo(1,"compatibility mode: unactivated")
 	# path check & make
 	temp = ("temp"+os.sep,"."+os.sep)
 	for i in temp:
