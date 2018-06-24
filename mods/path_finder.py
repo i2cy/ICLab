@@ -2,6 +2,7 @@ INFO = {"scan":("path_find","Scan a target path and its sub files")}
 RLTS = {"cls":("os",),"funcs":("echo","get_args"),"vars":()}
 
 def path_find(cmd): # path finder
+	cmd_version = "1.1"
 	kwd = ""
 	target = ""
 	opts = get_args(cmd)
@@ -10,7 +11,7 @@ def path_find(cmd): # path finder
 		return
 	for i in opts:
 		if i in ("-h","--help"):
-			echo(1,"""Path/File Finder
+			echo(1,"""Path/File Finder ( v""" + cmd_version + """ )
 
 Usage: scan <-t> <target_name> [-k]
 
@@ -32,16 +33,16 @@ Examples:
 		else:
 			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
-		if not os.path.exists(target):
-			echo(1,"[ERROR] target path \"" + target + "\" not found")
-			return
-		else:
-			pass
-		if not os.path.isdir(target):
-			echo(1,"[ERROR] target \"" + target + "\" is a file")
-			return
-		else:
-			pass
+	if not os.path.exists(target):
+		echo(1,"[ERROR] target path \"" + target + "\" not found")
+		return
+	else:
+		pass
+	if not os.path.isdir(target):
+		echo(1,"[ERROR] target \"" + target + "\" is a file")
+		return
+	else:
+		pass
 	echo(1,"scanning \"" + target + "\"...")
 	files = scan_path(target,"all")
 	echo(0,"--------------- [Paths] ---------------")
