@@ -12,7 +12,7 @@
 
 # global tags:
 
-VERSION = "1.2.4"
+VERSION = "1.3.3"
 
 
 
@@ -174,12 +174,31 @@ class _GetchUnix: # sub class of nonblocking input to get character from Unix
 		import sys, tty, termios
 		fd = sys.stdin.fileno()
 		old_settings = termios.tcgetattr(fd)
+		res = ""
 		try:
 			tty.setraw(sys.stdin.fileno(), termios.TCSANOW)
 			ch = sys.stdin.read(1)
+			if ch == "\x1b":
+				ch = sys.stdin.read(1)
+				if ch == "[":
+					ch = sys.stdin.read(1)
+					if ch == "A":
+						res = b'\xe0\x48'
+					elif ch == "B":
+						res = b'\xe0\x50'
+					elif ch == "D":
+						res = b"\xe0\x4b"
+					elif ch == "C":
+						res = b"\xe0\x4d"
+					else:
+						res = ""
+				else:
+					res = ""
+			else:
+				res = ch
 		finally:
 			termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-		return ch
+		return res
 
 
 
@@ -191,9 +210,20 @@ class _GetchWindows: # sub class of nonblocking input to get character from Wind
 		import msvcrt
 		temp = msvcrt.getch()
 		if temp == b"\x00":
-			return ""
+			temp = msvcrt.getch()
+			try:
+				res = temp.decode()
+			except Exception:
+				temp += msvcrt.getch()
+				res = temp
+			return res
 		else:
-			return temp.decode()
+			try:
+				res = temp.decode()
+			except Exception:
+				temp += msvcrt.getch()
+				res = temp
+			return res
 
 
 
@@ -353,12 +383,270 @@ def load_blockinfo(key,name): # block info loader
 
 
 
+def passwd_input(head=""): # password input function, cover inputs
+	if C_MODE:
+		res = input(head)
+		return res
+	else:
+		sys.stdout.write(head)
+		sys.stdout.flush()
+		getch = _Getch()
+		res = ''
+		while True:
+			ch = getch()
+			if ch == '\r':
+				sys.stdout.write('\n')
+				return res
+			elif ch in (b'\xe0\x4b',b'\xe0\x48',b'\xe0\x4d',b'\xe0\x50'):
+				pass
+			elif ch in (chr(127),"\b"):
+				res = res[:-1]
+				sys.stdout.write('\b \r' + head + '*'*len(res))
+				sys.stdout.flush()
+			elif ch in (chr(3),chr(4)):
+				raise KeyboardInterrupt()
+			elif ch == chr(26):
+				exit()
+			else:
+				try:
+					res += ch
+					sys.stdout.write('\r' + head + '*'*len(res))
+					sys.stdout.flush()
+				except Exception:
+					pass
+
+
+
+
+def cmd_input(head=""): # command shell inputer
+	global MEMO
+	if C_MODE:
+		res = input(head)
+		return res
+	else:
+		sys.stdout.write(head)
+		sys.stdout.flush()
+		getch = _Getch()
+		res = ""
+		res2 = ""
+		old = ""
+		h = 0
+		t = 0
+		# react part
+		while True:
+			ch = getch()
+			if t == 0:
+				old = res + res2
+			if ch == '\r':
+				res = res + res2
+				sys.stdout.write('\r' + head + res + '\n')
+				temp = []
+				for i in MEMO.read("input_history"):
+					temp.append(i)
+				temp.append(res)
+				MEMO.set({"input_history":temp})
+				return res
+			elif ch == b'\xe0\x4b':
+				if len(res) > 0:
+					res2 = list(res2)
+					res2.insert(0,res[-1])
+					res2 = "".join(res2)
+					res = res[:-1]
+					sys.stdout.write('\r' + head + res)
+					sys.stdout.flush()
+				else:
+					pass
+			elif ch == b'\xe0\x4d':
+				if len(res2) > 0:
+					res += res2[0]
+					res2 = res2[1:]
+					sys.stdout.write('\r' + head + res + res2)
+					sys.stdout.write('\r' + head + res)
+					sys.stdout.flush()
+				else:
+					pass
+			elif ch == b'\xe0\x48':
+				history = MEMO.read("input_history")
+				if len(history) > 0 and t < len(history):
+					t += 1
+					sys.stdout.write('\r'+ " "*len(head+res+res2))
+					res = history[-t]
+					res2 = ""
+					sys.stdout.write('\r' + head + res)
+					sys.stdout.flush()
+				else:
+					pass
+			elif ch == b'\xe0\x50':
+				history = MEMO.read("input_history")
+				if t > 1:
+					t -= 1
+					sys.stdout.write('\r'+ " "*len(head+res+res2))
+					res = history[-t]
+					res2 = ""
+					sys.stdout.write('\r' + head + res)
+					sys.stdout.flush()
+				else:
+					t = 0
+					sys.stdout.write('\r'+ " "*len(head+res+res2))
+					res = old
+					res2 = ""
+					sys.stdout.write('\r' + head + res)
+					sys.stdout.flush()
+			elif ch == "\t":
+				if res == "":
+					sys.stdout.write("\a")
+					sys.stdout.flush()
+				else:
+					n = 0
+					for i in res:
+						if i == "\"":
+							n += 1
+					temp_y = n % 2 != 0
+					if res[-1] == " " and not temp_y:
+						if h == 1:
+							h = 0
+							temp = scan_path('./',"top")
+							path = temp[0]
+							file = temp[1]
+							n = 0
+							for i in path:
+								path[n] = i[2:] + os.sep
+								n += 1
+							n = 0
+							for i in file:
+								file[n] = i[2:]
+								n += 1
+							path.sort()
+							file.sort()
+							temp = path + file
+							sys.stdout.write("\n")
+							sys.stdout.flush()
+							for i in temp:
+								print(i)
+							sys.stdout.write('\r' + head + res + res2)
+							sys.stdout.write("\r" + head + res)
+							sys.stdout.flush()
+						else:
+							h = 1
+					else:
+						if h == 1:
+							h = 0
+						else:
+							h = 1
+							continue
+						if not ' ' in res:
+							temp = list(CMDS.keys())
+							temp2 = []
+							for i in temp:
+								if res == i[:len(res)]:
+									temp2.append(i)
+							if len(temp2) == 0:
+								sys.stdout.write("\a")
+								sys.stdout.flush()
+								continue
+							elif len(temp2) == 1:
+								res = temp2[0]
+								sys.stdout.write('\r' + head + res + res2)
+								sys.stdout.write("\r" + head + res)
+								sys.stdout.flush()
+							else:
+								sys.stdout.write("\n")
+								sys.stdout.flush()
+								for i in temp2:
+									print(i)
+								sys.stdout.write('\r' + head + res + res2)
+								sys.stdout.write("\r" + head + res)
+								sys.stdout.flush()
+						else:
+							if temp_y:
+								temp = res.split("\"")
+							else:
+								temp = res.split(" ")
+							temp = read_path(temp[-1])
+							temp_i = False
+							temp = list(temp)
+							if temp[0] == "":
+								temp_i = True
+								temp[0] = "./"
+							else:
+								pass
+							try:
+								temp2 = scan_path(temp[0],"top")
+							except Exception:
+									sys.stdout.write("\a")
+									sys.stdout.flush()
+									continue
+							path = temp2[0]
+							file = temp2[1]
+							n = 0
+							for i in path:
+								path[n] = i[len(temp[0]):] + os.sep
+								n += 1
+							n = 0
+							for i in file:
+								file[n] = i[len(temp[0]):]
+								n += 1
+							path.sort()
+							file.sort()
+							temp2 = path + file
+							temp3 = []
+							for i in temp2:
+								if temp[1] == i[:len(temp[1])]:
+									temp3.append(i)
+							del temp2
+							if len(temp3) == 1:
+								if temp_i:
+									temp[0] = ""
+								temp[0] = list(temp[0])
+								n = 0
+								for i in temp[0]:
+									if i in ("\\","/"):
+										(temp[0])[n] = os.sep
+									n += 1
+								temp[0] = "".join(temp[0])
+								res = res[:-len(temp[0]+temp[1])] + temp[0] + temp3[0]
+								sys.stdout.write('\r' + head + res + res2)
+								sys.stdout.write("\r" + head + res)
+								sys.stdout.flush()
+							if len(temp3) == 0:
+								sys.stdout.write("\a")
+								sys.stdout.flush()
+								continue
+							sys.stdout.write("\n")
+							sys.stdout.flush()
+							for i in temp3:
+								print(i)
+							sys.stdout.write('\r' + head + res + res2)
+							sys.stdout.write("\r" + head + res)
+							sys.stdout.flush()
+			elif ch in (chr(127),"\b"):
+				sys.stdout.write('\r'+ " "*len(head+res+res2))
+				res = res[:-1]
+				sys.stdout.write('\r' + head + res + res2)
+				sys.stdout.write('\r' + head + res)
+				sys.stdout.flush()
+			elif ch in (chr(3),chr(4)):
+				raise KeyboardInterrupt()
+			elif ch == chr(26):
+				exit()
+			else:
+				try:
+					res += ch
+					sys.stdout.write('\r' + head + res + res2)
+					sys.stdout.write('\r' + head + res)
+					sys.stdout.flush()
+				except Exception:
+					pass
+
+
+
+
 def cmd_loop(): # command shell loop
 	global ECHO
 	try:
 		while True:
 			try:
-				temp = input(HEAD + ":" + PATH + ">")
+				temp = cmd_input(HEAD + ":" + PATH + ">")
 				cmd = ""
 				args = ""
 				temp_2 = ""
@@ -537,38 +825,8 @@ def read_path(path): # Path String Reader
 
 
 
-def passwd_input(head=""): # password input function, cover inputs
-	if C_MODE:
-		res = input(head)
-		return res
-	else:
-		sys.stdout.write(head)
-		sys.stdout.flush()
-		getch = _Getch()
-		res = ''
-		while True:
-			ch = getch()
-			if ch == '\r':
-				sys.stdout.write('\n')
-				return res
-			elif ch in (chr(127),"\b"):
-				res = res[:-1]
-				sys.stdout.write('\b \r' + head + '*'*len(res))
-				sys.stdout.flush()
-			elif ch in (chr(3),chr(4)):
-				raise KeyboardInterrupt()
-			elif ch == chr(26):
-				exit()
-			else:
-				res += ch
-				sys.stdout.write('\b \r' + head + '*'*len(res))
-				sys.stdout.flush()
-
-
-
-
 def init(): # initializer
-	global sys, os, time, zipfile, json, shutil, OS,threading , BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG, C_MODE
+	global sys, os, time, zipfile, json, shutil, OS, threading, BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG, C_MODE, MEMO
 	DEBUG = False
 	HEAD = "ICLab"
 	BLOCK = ""
@@ -593,6 +851,9 @@ def init(): # initializer
 		sys.exit(1)
 	else:
 		echo(1,"python version check: PASS")
+	# temp_global_memory setup
+	MEMO = temp_memo()
+	echo(1,"global memory class: PASS")
 	# os check
 	if os.name == "nt":
 		OS = "win"
@@ -608,6 +869,15 @@ def init(): # initializer
 	else:
 		CMDS.update({"cd":CMDS["chd"]})
 	CMDS.pop("chd")
+	# import by os
+	if OS == "win":
+		pass
+	else:
+		pass
+	echo(1,"import by OS status: PASS")
+	# record input
+	MEMO.set({"input_history":[]})
+	echo(1,"input history class: PASS")
 	# work path check
 	if os.getcwd() != sys.path[0] and sys.path[0] != "":
 		echo(1,"moving work path to \"" + sys.path[0] + "\"")
@@ -618,10 +888,10 @@ def init(): # initializer
 	# compatibility check ( serch a file in ./ named "c_mode.icl" )
 	if os.path.exists("./c_mode.icl"):
 		C_MODE = True
-		echo(1,"compatibility mode: activated")
+		echo(1,"compatibility mode: Activated")
 	else:
 		C_MODE = False
-		echo(1,"compatibility mode: unactivated")
+		echo(1,"compatibility mode: Inactivated")
 	# path check & make
 	temp = ("temp"+os.sep,"."+os.sep)
 	for i in temp:
@@ -1122,7 +1392,7 @@ Examples:
 	else:
 		pass
 	try:
-		temp = input("Old password: ")
+		temp = passwd_input("Old password: ")
 	except KeyboardInterrupt:
 		echo(0,"")
 		echo(1,"keyboard interrupt detected, exiting")
@@ -1135,8 +1405,8 @@ Examples:
 	try:
 		wait = True
 		while wait:
-			password = input("New password: ")
-			temp = input("Verify password: ")
+			password = passwd_input("New password: ")
+			temp = passwd_input("Verify password: ")
 			wait = False
 			if temp != password:
 				echo(1,"password verification failed, please try again")

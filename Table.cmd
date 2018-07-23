@@ -1,11 +1,11 @@
 @echo off
 title ICLab Table
 color 0b
-python --version >nul 2>nul
+py --version >nul 2>nul
 if NOT %ERRORLEVEL% == 0 goto E_python
 goto S_table
 :S_table
-python Table.py
+py Table.py
 if NOT %ERRORLEVEL% == 0 pause
 exit
 :E_python
