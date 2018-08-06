@@ -12,7 +12,7 @@
 
 # global tags:
 
-VERSION = "1.3.3"
+VERSION = "1.5.3"
 
 
 
@@ -242,12 +242,14 @@ class temp_memo: # temp memory class
 		if name == None:
 			return self.data
 	def read_pop(self,name=None):
-		res = read(name)
 		if name == None:
-			for i in res:
-				pop(i)
+			res = {}
+			for i in self.data:
+				res.update(self.data[i])
+			self.data = {}
 		else:
-			pop(name)
+			res = self.data[name]
+			self.data.pop(name)
 		return res
 	def pop(self,name):
 		self.data.pop(name)
@@ -286,7 +288,11 @@ def echo(mode,msg): # console message printer ( can be redefine by package )
 
 
 
-def end(): # close ICLab
+def ICLab_end(): # close ICLab
+	try:
+		shutil.rmtree(sys.path[0] + os.sep + "temp")
+	except:
+		pass
 	sys.exit(0)
 
 
@@ -365,7 +371,7 @@ def execute(cmd): # execute command and update loacls to globals
 
 
 def load_blockinfo(key,name): # block info loader
-	global HEAD, PWD
+	global PWD, USER
 	blk = block.load(name)
 	data = blk.read("user/user.json")
 	coder = iccode(key)
@@ -374,7 +380,7 @@ def load_blockinfo(key,name): # block info loader
 	data = json.loads(data)
 	PWD = ""
 	if data["iccode_key"] == key:
-		HEAD = data["username"] + "@" + HEAD
+		USER = data["username"]
 		PWD = key
 		return (True,blk)
 	else:
@@ -418,7 +424,7 @@ def passwd_input(head=""): # password input function, cover inputs
 
 
 
-def cmd_input(head=""): # command shell inputer
+def cmd_input(head="",more=""): # command shell inputer
 	global MEMO
 	if C_MODE:
 		res = input(head)
@@ -469,7 +475,7 @@ def cmd_input(head=""): # command shell inputer
 				history = MEMO.read("input_history")
 				if len(history) > 0 and t < len(history):
 					t += 1
-					sys.stdout.write('\r'+ " "*len(head+res+res2))
+					sys.stdout.write('\r'+ " "*(len(head+res+res2)-len(more)))
 					res = history[-t]
 					res2 = ""
 					sys.stdout.write('\r' + head + res)
@@ -480,14 +486,14 @@ def cmd_input(head=""): # command shell inputer
 				history = MEMO.read("input_history")
 				if t > 1:
 					t -= 1
-					sys.stdout.write('\r'+ " "*len(head+res+res2))
+					sys.stdout.write('\r'+ " "*(len(head+res+res2)-len(more)))
 					res = history[-t]
 					res2 = ""
 					sys.stdout.write('\r' + head + res)
 					sys.stdout.flush()
 				else:
 					t = 0
-					sys.stdout.write('\r'+ " "*len(head+res+res2))
+					sys.stdout.write('\r'+ " "*(len(head+res+res2)-len(more)))
 					res = old
 					res2 = ""
 					sys.stdout.write('\r' + head + res)
@@ -522,7 +528,7 @@ def cmd_input(head=""): # command shell inputer
 							sys.stdout.write("\n")
 							sys.stdout.flush()
 							for i in temp:
-								print(i)
+								echo(0,i)
 							sys.stdout.write('\r' + head + res + res2)
 							sys.stdout.write("\r" + head + res)
 							sys.stdout.flush()
@@ -534,7 +540,7 @@ def cmd_input(head=""): # command shell inputer
 						else:
 							h = 1
 							continue
-						if not ' ' in res:
+						if not ' ' in res and not res[:2] in (".\\","./"):
 							temp = list(CMDS.keys())
 							temp2 = []
 							for i in temp:
@@ -553,7 +559,7 @@ def cmd_input(head=""): # command shell inputer
 								sys.stdout.write("\n")
 								sys.stdout.flush()
 								for i in temp2:
-									print(i)
+									echo(0,i)
 								sys.stdout.write('\r' + head + res + res2)
 								sys.stdout.write("\r" + head + res)
 								sys.stdout.flush()
@@ -615,12 +621,12 @@ def cmd_input(head=""): # command shell inputer
 							sys.stdout.write("\n")
 							sys.stdout.flush()
 							for i in temp3:
-								print(i)
+								echo(0,i)
 							sys.stdout.write('\r' + head + res + res2)
 							sys.stdout.write("\r" + head + res)
 							sys.stdout.flush()
 			elif ch in (chr(127),"\b"):
-				sys.stdout.write('\r'+ " "*len(head+res+res2))
+				sys.stdout.write('\r'+ " "*(len(head+res+res2)-len(more)))
 				res = res[:-1]
 				sys.stdout.write('\r' + head + res + res2)
 				sys.stdout.write('\r' + head + res)
@@ -641,91 +647,16 @@ def cmd_input(head=""): # command shell inputer
 
 
 
-def cmd_loop(): # command shell loop
+def ICLab_cmd_loop(): # command shell loop
 	global ECHO
 	try:
 		while True:
 			try:
-				temp = cmd_input(HEAD + ":" + PATH + ">")
-				cmd = ""
-				args = ""
-				temp_2 = ""
-				tag = True
-				to = False
-				for i in temp:
-					if tag:
-						if not i in (" ",">"):
-							cmd += i
-							continue
-						if i == " ":
-							tag = False
-							continue
-						elif i == ">":
-							tag = False
-							temp_2 += i
-					else:
-						temp_2 += i
-						continue
+				temp = cmd_input("\033[1;7;36m" + USER + "\033[1;27;4;36m" + HEAD + "\033[0m\033[1;24;33m:" + PATH + ">\033[0m", "\033[1;7;36m\033[1;27;4;36m\033[0m\033[1;24;33m\033[0m")
+				scripts_executer(temp)
 			except KeyboardInterrupt:
 				echo(0,"\nKeyboardInterrupt")
 				continue
-			if cmd in CMDS:
-				write_to = ""
-				for i in temp_2:
-					if i == ">":
-						write_to = ""
-						to = True
-						continue
-					if to:
-						write_to += i
-				if write_to != "":
-					temp = temp_2[:-(len(write_to)+1)]
-					for i in temp:
-						if i == "\"":
-							a = "\\" + i
-						elif i == "\\":
-							a = "\\" + i
-						else:
-							a = i
-						args += a
-					echo(1,"[INFO] console message is now redirected to \"" + write_to + "\"")
-					ECHO = write_to
-				else:
-					for i in temp_2:
-						if i == "\"":
-							a = "\\" + i
-						elif i == "\\":
-							a = "\\" + i
-						else:
-							a = i
-						args += a
-				if not DEBUG:
-					try:
-						try:
-							exec((CMDS[cmd])[0]+ "(\"" + args + "\")")
-							if ECHO == write_to:
-								ECHO = True
-						except KeyboardInterrupt:
-							ECHO = True
-							echo(1,"keyboard interrupt detected, exitting")
-							continue
-					except Exception as err:
-						ECHO = True
-						echo(1,"[ERROR] Error while executing \"" + cmd + "\", result: " + str(err))
-				else:
-					try:
-						exec((CMDS[cmd])[0]+ "(\"" + args + "\")")
-						if ECHO == write_to:
-							ECHO = True
-					except KeyboardInterrupt:
-						ECHO = True
-						echo(1,"keyboard interrupt detected, exitting")
-						continue
-			else:
-				try:
-					os.system(temp)
-				except KeyboardInterrupt:
-					pass
 	except KeyboardInterrupt:
 		echo(1,"keyboard interrupt detected, exitting")
 		return
@@ -765,8 +696,249 @@ def get_args(opt): # decode command shell's argument(s)
 			argv = i
 			res.update({argv:""})
 	if DEBUG:
-		print(res)
+		echo(0,res)
 	return res
+
+
+
+
+def scripts_error(name,script,pos,info): # scripts error traceback (ps: pos = (file,line,position))
+	echo(0,"")
+	echo(1,"ICLab scripts ERROR, Traceback:")
+	echo(0,"  File \"" + pos[0] + "\", line " + str(pos[1]))
+	echo(0,"  " + script)
+	echo(0," "*(pos[2]+2) + "^")
+	echo(0,name + ": " + info)
+
+
+
+
+def scripts_processor(scr,filename="<consolo>"): # scripts preprocessor
+	if "\n" in scr:
+		if "\r" in scr:
+			scr = scr.split("\r\n")
+		else:
+			scr = scr.split("\n")
+	else:
+		scr = [scr]
+	funcs = {}
+	scrs = []
+	func = None
+	line = 0
+	for i in scr:
+		line += 1
+		if "::" == i[:2]:
+			if len(i[2:]) == 0:
+				scripts_error("SyntaxError",i,(filename,line,len(i)-1),"function name length must be more than 0")
+				return
+			elif i[2:] == " "*len(i[2:]):
+				scripts_error("SyntaxError",i,(filename,line,len(i)-1),"function name can't be all filled with \" \"")
+				return
+			else:
+				func = i[2:]
+				funcs.update({func:[]})
+		elif ":END" == i[:4]:
+			func = None
+		else:
+			if func != None:
+				temp = funcs[func]
+				temp.append(i)
+				funcs.update({func:temp})
+			else:
+				scrs.append(i)
+	while len(scrs) > 0:
+		temp = scrs.pop(0)
+		res = scripts_executer(temp)
+		if res == None:
+			pass
+		else:
+			if res[0] == "func":
+				if res[1] in funcs.keys():
+					temp_2 = (funcs[res[1]])[::-1]
+					for i in temp_2:
+						scrs.insert(0,i)
+				else:
+					n = 0
+					for i in scr:
+						n += 1
+						if i == temp:
+							break
+					scripts_error("NameError",temp,(filename,n,4),"function name \"" + res[1] + "\" not found")
+					return
+			elif res[0] == "error":
+				n = 0
+				for i in scr:
+					n += 1
+					if i == temp:
+						break
+				scripts_error((res[1])[0],i,(filename,n,(res[1])[1]),(res[1])[2])
+				return
+			else:
+				pass
+
+
+
+
+def scripts_executer(scr_scripts_executer): # scripts executer
+	global ECHO, BLOCK
+	try:
+		cmd_scripts_executer = ""
+		temp_2_scripts_executer = ""
+		tag_scripts_executer = True
+		for i_scripts_executer in scr_scripts_executer:
+			if tag_scripts_executer:
+				if i_scripts_executer == " ":
+					tag_scripts_executer = False
+					continue
+				else:
+					cmd_scripts_executer += i_scripts_executer
+			else:
+				temp_2_scripts_executer += i_scripts_executer
+				continue
+		if cmd_scripts_executer == "" or cmd_scripts_executer == len(cmd_scripts_executer)*" ":
+			return
+		elif cmd_scripts_executer == "RUN":
+			return ("func",temp_2_scripts_executer)
+		elif cmd_scripts_executer == "IF":
+			a_scripts_executer = None
+			b_scripts_executer = None
+			n_scripts_executer = 0
+			c_scripts_executer = 0
+			for i2_scripts_executer in scr_scripts_executer:
+				n_scripts_executer += 1
+				if i2_scripts_executer == "(":
+					if a_scripts_executer == None:
+						a_scripts_executer = n_scripts_executer
+					c_scripts_executer += 1
+				if i2_scripts_executer == ")":
+					if c_scripts_executer == 0:
+						return ("error",("ConditionError",2,"condition not found"))
+					elif c_scripts_executer == 1:
+						b_scripts_executer = n_scripts_executer
+						break
+					else:
+						c_scripts_executer -= 1
+			if a_scripts_executer == None or b_scripts_executer == None or a_scripts_executer > b_scripts_executer:
+				return ("error",("ConditionError",2,"condition not found"))
+			else:
+				temp_scripts_executer = scr_scripts_executer[a_scripts_executer:b_scripts_executer-1]
+			try:
+				exec("MEMO.set({\"scripts_executer_temp\":" + temp_scripts_executer + "})")
+			except Exception as err_scripts_executer:
+				n = 0
+				for i2_scripts_executer in scr_scripts_executer:
+					n_scripts_executer += 1
+					if i2_scripts_executer == scr_scripts_executer:
+						break
+				return ("error",("ConditionError",b_scripts_executer-2,str(err_scripts_executer)))
+			temp_scripts_executer = ""
+			tag_scripts_executer = False
+			for i_scripts_executer in scr_scripts_executer[b_scripts_executer:]:
+				if tag_scripts_executer:
+					temp_scripts_executer += i_scripts_executer
+				else:
+					if i_scripts_executer == " ":
+						pass
+					else:
+						tag_scripts_executer = True
+						temp_scripts_executer += i_scripts_executer
+			if MEMO.read_pop("scripts_executer_temp"):
+				res_scripts_executer = scripts_executer(temp_scripts_executer)
+				return res_scripts_executer
+			else:
+				return
+		elif cmd_scripts_executer[:2] in (".\\","./"):
+			if scr_scripts_executer[-4:] == ".ics":
+				scr_scripts_executer = "icsh " + scr_scripts_executer
+		elif cmd_scripts_executer[0] == "#":
+			return
+		else:
+			pass
+		cmd_scripts_executer = ""
+		args_scripts_executer = ""
+		temp_2_scripts_executer = ""
+		tag_scripts_executer = True
+		to_scripts_executer = False
+		for i_scripts_executer in scr_scripts_executer:
+			if tag_scripts_executer:
+				if not i_scripts_executer in (" ",">"):
+					cmd_scripts_executer += i_scripts_executer
+					continue
+				if i_scripts_executer == " ":
+					tag_scripts_executer = False
+					continue
+				elif i_scripts_executer == ">":
+					tag_scripts_executer = False
+					temp_2_scripts_executer += i_scripts_executer
+			else:
+				temp_2_scripts_executer += i_scripts_executer
+				continue
+	except KeyboardInterrupt:
+		if len(scr_scripts_executer) == 0:
+			scr_scripts_executer = " "
+		return ("error",("KeyboardInterrupt",len(scr_scripts_executer)-1,""))
+	if cmd_scripts_executer in CMDS:
+		write_to_scripts_executer = ""
+		for i_scripts_executer in temp_2_scripts_executer:
+			if i_scripts_executer == ">":
+				write_to_scripts_executer = ""
+				to_scripts_executer = True
+				continue
+			if to_scripts_executer:
+				write_to_scripts_executer += i_scripts_executer
+		if write_to_scripts_executer != "":
+			sc_scripts_executerr = temp_2_scripts_executer[:-(len(write_to_scripts_executer)+1)]
+			for i_scripts_executer in scr_scripts_executer:
+				if i_scripts_executer == "\"":
+					a_scripts_executer = "\\" + i_scripts_executer
+				elif i_scripts_executer == "\\":
+					a_scripts_executer = "\\" + i_scripts_executer
+				else:
+					a_scripts_executer = i_scripts_executer
+				args_scripts_executer += a_scripts_executer
+			echo(1,"[INFO] console message is now redirected to \"" + write_to_scripts_executer + "\"")
+			ECHO = write_to_scripts_executer
+		else:
+			for i_scripts_executer in temp_2_scripts_executer:
+				if i_scripts_executer == "\"":
+					a_scripts_executer = "\\" + i_scripts_executer
+				elif i_scripts_executer == "\\":
+					a_scripts_executer = "\\" + i_scripts_executer
+				else:
+					a_scripts_executer = i_scripts_executer
+				args_scripts_executer += a_scripts_executer
+		if not DEBUG:
+			try:
+				try:
+					exec((CMDS[cmd_scripts_executer])[0]+ "(\"" + args_scripts_executer + "\")")
+					if ECHO == write_to_scripts_executer:
+						ECHO = True
+				except KeyboardInterrupt:
+					ECHO = True
+					if len(scr_scripts_executer) == 0:
+						scr_scripts_executer = " "
+					return ("error",("KeyboardInterrupt",len(scr_scripts_executer)-1,""))
+			except Exception as err_scripts_executer:
+				ECHO = True
+				echo(1,"[ERROR] Error while executing \"" + cmd_scripts_executer + "\", result: " + str(err_scripts_executer))
+				return ("error",("Exception",len(scr_scripts_executer)-1,str(err_scripts_executer)))
+		else:
+			try:
+				exec((CMDS[cmd_scripts_executer])[0]+ "(\"" + args_scripts_executer + "\")")
+				if ECHO == write_to_scripts_executer:
+					ECHO = True
+			except KeyboardInterrupt:
+				ECHO = True
+				if len(scr_scripts_executer) == 0:
+					scr_scripts_executer = " "
+				return ("error",("KeyboardInterrupt",len(scr_scripts_executer)-1,""))
+	else:
+		try:
+			os.system(scr_scripts_executer)
+		except KeyboardInterrupt:
+			if len(scr_scripts_executer) == 0:
+				scr_scripts_executer = " "
+			return ("error",("KeyboardInterrupt",len(scr_scripts_executer)-1,""))
 
 
 
@@ -825,13 +997,92 @@ def read_path(path): # Path String Reader
 
 
 
-def init(): # initializer
-	global sys, os, time, zipfile, json, shutil, OS, threading, BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG, C_MODE, MEMO
+def ICLab_args_processor(): # process the cmd args when running ICLab by shell
+	global ARGS
+	parser = argparse.ArgumentParser(description='ICLab command shell [v'+VERSION+']')
+	parser.add_argument('-s', action='store', dest='iclab_scripts_file',
+						help='Execute an ICLab script')
+	parser.add_argument('-b', action='store', dest='block_file',
+						help='Load a Block file after ICLab initilized')
+	parser.add_argument('-p', action='store', dest='block_file_passwords',
+						help='Block file passwords')
+	parser.add_argument('-k', action='store_true', default=False,
+						dest='keep_shell_on',
+						help='keep ICLab running after it executed scripts')
+	args = parser.parse_args()
+	file = None
+	blk = None
+	pwd = None
+	keep = False
+	if args.iclab_scripts_file:
+		ARGS = True
+		file = args.iclab_scripts_file
+	if args.block_file:
+		ARGS = True
+		blk = args.block_file
+	if args.keep_shell_on:
+		ARGS = True
+		keep = args.keep_shell_on
+	if args.block_file_passwords:
+		ARGS = True
+		pwd = args.block_file_passwords
+	if blk != None:
+		if pwd == None:
+			wait = True
+			try:
+				while wait:
+					pwd = passwd_input("Block-Password: ")
+					wait = False
+					try:
+						load_block("-t \"" + blk + "\" -p \"" + pwd + "\"")
+						if type("") == type(BLOCK):
+							wait = True
+					except Exception as err:
+						echo(1,"[ERROR] Failed to load block, result: " + str(err))
+						wait = True
+			except KeyboardInterrupt:
+				echo(0,"")
+				echo(1,"keyboard interrupt detected, skipping block loading")
+		else:
+			try:
+				load_block("-t \"" + blk + "\" -p \"" + pwd + "\"")
+			except Exception as err:
+				echo(1,"[ERROR] Failed to load block, result: " + str(err))
+				ICLab_end()
+	if file != None:
+		if not os.path.exists(file):
+			echo(1,"[ERROR] file \"" + file + "\" not found")
+			ICLab_end()
+		if os.path.isdir(file):
+			echo(1,"[ERROR] file \"" + file + "\" is a folder")
+			ICLab_end()
+		f = open(file)
+		scr = f.read()
+		f.close()
+		del f
+		try:
+			scripts_processor(scr,filename=file)
+			echo(0,"")
+		except KeyboardInterrupt:
+			exit_iclab("")
+		if keep:
+			pass
+		else:
+			exit_iclab("")
+	return
+
+
+
+
+def ICLab_init(): # initializer
+	global sys, os, time, zipfile, json, shutil, OS, threading, argparse, BLOCK, CMDS, HEAD, PATH, OG, OCMDS, ECHO, DEBUG, C_MODE, MEMO, ARGS, USER
+	USER = ""
 	DEBUG = False
 	HEAD = "ICLab"
 	BLOCK = ""
 	ECHO = True
 	COVER = False
+	ARGS = False
 	CMDS = {"exit":("exit_iclab","Exit ICLab working table"),
 	"createblock":("block_create","ICLab Block create guide"),
 	"ichelp":("iclab_help","List all available ICLab commands"),
@@ -841,13 +1092,14 @@ def init(): # initializer
 	"edmods":("edit_module","Block module manager"),
 	"edconf":("edit_userconf","Block user config editor"),
 	"chpwd":("ch_pwd","Block password change guide"),
-	"icdebug":("iclab_debug","ICLab debug mode")}
+	"icdebug":("iclab_debug","ICLab debug mode"),
+	"icsh":("run_scripts","Run IClab scripts")}
 	echo(1,"Initilizing...")
-	import sys, os, time, zipfile, json, shutil, threading
+	import sys, os, time, zipfile, json, shutil, threading, argparse
 	echo(1,'ICLab ( Version: ' + VERSION + ' )')
 	# python version check
 	if float(sys.version[:3]) < 3.4:
-		echo(1,"ICLab only support Python3.4+ environment, please go visit https://www.python.org/downloads download a Python3.4+ if you haven't installed yet")
+		echo(1,"ICLab only support Python3.4+ environment, please go visit https://www.python.org/downloads download a Python3.4+ environment if you haven't installed yet")
 		sys.exit(1)
 	else:
 		echo(1,"python version check: PASS")
@@ -904,13 +1156,15 @@ def init(): # initializer
 	for i in globals():
 		OG.update({i:globals()[i]})
 	echo(1,"backup globals: PASS")
-	echo(1,"Initialization compeleted")
+	echo(1,"Initialization compeleted\n")
 
 
 
 
-def search_blk(): # block search & load guide
-	global BLOCK
+def ICLab_search_blk(): # block search & load guide
+	global BLOCK, ARGS
+	if ARGS:
+		return
 	files = scan_path("." + os.sep,"top")[1]
 	blocks = []
 	for i in files:
@@ -932,7 +1186,7 @@ def search_blk(): # block search & load guide
 		wait = True
 		try:
 			while wait:
-				temp = input("Choice: ")
+				temp = input("\nChoice: ")
 				try:
 					BLOCK = blocks[int(temp)-1]
 					wait = False
@@ -957,15 +1211,6 @@ def search_blk(): # block search & load guide
 		except KeyboardInterrupt:
 			echo(0,"")
 			echo(1,"keyboard interrupt detected, skipping block loading")
-
-
-
-
-def main(): # main scripts
-	init()
-	search_blk()
-	cmd_loop()
-	end()
 
 
 
@@ -1000,8 +1245,7 @@ def exit_iclab(cmd): # exit iclab
 	else:
 		pass
 	echo(1,"cleanning up caches")
-	shutil.rmtree(sys.path[0] + os.sep + "temp")
-	end()
+	ICLab_end()
 
 
 
@@ -1022,6 +1266,7 @@ def edit_module(cmd): # module adder
 	global BLOCK
 	dlt = ""
 	add = ""
+	yes = False
 	lists = False
 	opts = get_args(cmd)
 	target = ""
@@ -1032,16 +1277,17 @@ def edit_module(cmd): # module adder
 		if i in ("-h","--help"):
 			echo(1,"""ICLab Block Module Add/Remover
 
-Usage: edmods <-a,-d> <module_name> [-l]
+Usage: edmods <-a,-d> <module_name> [-l] [-y]
 
  -a --add <module_name>         - add module to block
  -d --delete <module_name>      - delete module from block
  -l --list                      - list all modules in the block
+ -y --yes                       - confirm Yes during the process
  -h --help                      - display this page
 
 Examples:
  > edmods -l
- > edmods -a test.py -d example.py -l
+ > edmods -a test.py -d example.py -l -y
 """)
 			return
 		elif i in ("-a","--add"):
@@ -1050,6 +1296,8 @@ Examples:
 			dlt = opts[i]
 		elif i in ("-l","--list"):
 			lists = True
+		elif i in ("-y","--yes"):
+			yes = True
 		else:
 			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
 			return
@@ -1071,8 +1319,11 @@ Examples:
 		temp = read_path(add)[1]
 		echo(1,"add module")
 		if temp in mods:
-			echo(1,"\"" + temp + "\" module already exist, overwrite?(input \"y\" for yes, else for not)")
-			choice = input("")
+			if not yes:
+				echo(1,"\"" + temp + "\" module already exist, overwrite?(input \"y\" for yes, else for not)")
+				choice = input("")
+			else:
+				choice = "y"
 			if choice == "y":
 				echo(1,"extracting block")
 				try:
@@ -1134,6 +1385,42 @@ Examples:
 
 
 
+def run_scripts(cmd): # ICLab scripts runner
+	opts = get_args(cmd)
+	for i in opts:
+		if i in ("-h","--help"):
+			echo(1,"""ICLab Scripts Executer
+
+Usage: icsh <scripts_file_name,-h>
+
+ -h --help                      - display this page
+
+Examples:
+ > icsh test.ics
+ > .""" + os.sep + """test.ics
+""")
+			return
+		else:
+			echo(1,"[ERROR] unhandled option \"" + i + "\", try \"-h\" tag for help")
+			return
+	if not os.path.exists(cmd):
+		echo(1,"[ERROR] file \"" + cmd + "\" not found")
+		return
+	if os.path.isdir(cmd):
+		echo(1,"[ERROR] \"" + cmd + "\" is a folder")
+		return
+	try:
+		f = open(cmd)
+		scr = f.read()
+		f.close()
+	except Exception as err:
+		echo(1,"[ERROR] error while reading scripts, result: " + str(err))
+		return
+	scripts_processor(scr,read_path(cmd)[1])
+
+
+
+
 def unload_block(cmd): # unload block
 	global BLOCK, CMDS, HEAD, OG, PWD
 	opts = get_args(cmd)
@@ -1168,6 +1455,7 @@ Examples:
 		globals().pop(i)
 	echo(1,"reseting header")
 	HEAD = "ICLab"
+	USER = ""
 	echo(1,"reseting block tag")
 	BLOCK.close()
 	BLOCK = BLOCK.filename
@@ -1693,5 +1981,22 @@ Usage: createblock
 
 
 
-if __name__ == '__main__':
+# --||||-- [ PROCESS FUNCTIONS ] --||||--
+
+
+
+
+def main(): # main processor
+	ICLab_init()
+	ICLab_args_processor()
+	ICLab_search_blk()
+	ICLab_cmd_loop()
+	ICLab_end()
+
+
+
+
+if __name__ == '__main__': # debug processor
 	main()
+else:
+	ICLab_init()
