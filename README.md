@@ -9,7 +9,7 @@
   the **Table.py**, also you can use some args when running ICLab(e.g. Table.py -h)
 - to run on **linux**, just run the **Table.py**
 - for **icshell command help** please use command **"ichelp"** in **icshell**
-- To redirect console message to a file please use "**>**", with a formant like **>** *[target_path]*   
+- To redirect console message to a file please use "**>**", with a format like **>** *[target_path]*   
   example:   
     scan -t ./ >result.txt
 
@@ -26,9 +26,9 @@
 ## Module Instructions ##
 - every module must be python scripts(definitely)
 - every module must has global tags **INFO** and **RLTS** in it    
-  ***INFO*** is a dict-type tag with a formant like this: *{<command_name>:(<function_name>,<short_description>)}*
+  ***INFO*** is a dict-type tag with a format like this: *{<command_name>:(<function_name>,<short_description>)}*
   which is used to register the command in module   
-  ***RLTS*** is a dict_type tag with a formant like this: *{"cls":(<related_classes>,...),"funcs":(<related_functions>,...),
+  ***RLTS*** is a dict_type tag with a format like this: *{"cls":(<related_classes>,...),"funcs":(<related_functions>,...),
   "vars":(<related_variables>,...)}*
   which is used to declare the relateds that this module need to have
 - to install a module, please load a **block file** first and use the command of **"edmods"**
