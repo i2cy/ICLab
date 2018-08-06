@@ -1,3 +1,5 @@
+#VERSION: 1.1
+
 INFO = {"rpy":("run_py","Run a python scripts with ICLab environment")}
 RLTS = {"cls":(),"funcs":("echo","get_args"),"vars":()}
 
@@ -18,7 +20,4 @@ Example:
 			return
 		else:
 			pass
-	try:
-		exec(cmd)
-	except Exception as err:
-		echo(1,"[ERROR] failed to execute script, result: " + str(err))
+	exec(cmd)

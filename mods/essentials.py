@@ -1,3 +1,5 @@
+#VERSION: 1.0
+
 INFO = {}
 RLTS = {"cls":(),"funcs":(),"vars":()}
 

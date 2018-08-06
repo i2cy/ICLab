@@ -1,3 +1,5 @@
+#VERSION: 1.0
+
 INFO = {"netscan":("icy_shadow_net_scanner","ISPY TCP scanner")}
 RLTS = {"cls":("temp_struck","threading","socket","time"),"funcs":("echo","get_args"),"vars":()}
 ISPY_VERSION = "1.3"

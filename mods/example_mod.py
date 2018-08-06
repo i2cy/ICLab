@@ -1,5 +1,7 @@
+#VERSION: 1.0
+
 INFO = {"example":("test","This is an example mod")}
-RLTS = {"cls":(),"funcs":("echo",),"vars":()}
+RLTS = {"cls":(),"funcs":("echo"),"vars":()}
 
 def test(cmd):
 	echo(0,cmd)
