@@ -6,17 +6,21 @@
 
 ## Instructions ##
 - to run on **Windows**, you can just run **Table.cmd** or by using command to execute
-  the **Table.py**
+  the **Table.py**, also you can use some args when running ICLab(e.g. Table.py -h)
 - to run on **linux**, just run the **Table.py**
 - for **icshell command help** please use command **"ichelp"** in **icshell**
+- To redirect console message to a file please use "**>**", with a formant like **>** *[target_path]*   
+  example:   
+    scan -t ./ >result.txt
 
 
 ## Block Instructions ##
   Block is a ICLab's encrypted storage zip file, which can be create by using command   
   **"createblock"** in icshell to create one
-- To redirect console message to a file please use "**>**", with a formant like **>** *[target_path]*   
-  example:   
-    scan -t ./ >result.txt
+
+
+## ICS Scripts Instructions ##
+  for details please check the example file ***test_scripts.ics*** in ***examples***
 
 
 ## Module Instructions ##
