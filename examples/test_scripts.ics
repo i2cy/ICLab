@@ -1,0 +1,45 @@
+# This is a test ICS scripts ("#*****" is comment)
+
+# "::XXX" defines the scripts below it as a function "XXX", kinda like CMD scripts but it won't run it self of you did't call it
+::echo_test
+
+# "IF (<python_scripts_conditions>) <scripts>" IF condition scripts format
+IF (OS == "win") echo [OS name: Winodws]
+IF (OS == "linux") echo [OS name: Linux]
+
+::on_linux
+echo ["cat test_scripts" test]
+cat test_scripts.ics
+sleep 1
+echo ["time" test]
+time
+
+::on_windows
+echo ["type" test]
+type test_scripts.ics
+echo ["date" test]
+date /T
+echo ["time" test]
+time /T
+
+# "#END" is a keyword to tell the executor that function defining part is ended
+:END
+
+# main scripts that would be running by default
+echo [ICS scripts test start]
+IF (OS == "win") pause
+IF (OS == "linux") sleep 3
+
+# "RUN XXXX" means run function XXXX
+RUN echo_test
+IF (OS == "win") RUN on_windows
+IF (OS == "linux") RUN on_linux
+IF (OS == "win") pause
+IF (OS == "linux") sleep 3
+
+# ICLab command is alse completely avaliable too
+ichelp
+loadblk -h
+icsh -h
+icdebug
+icdebug
